@@ -25,9 +25,9 @@ You can use this proxy for various purposes:
 
 6) SAML and OpenID Connect interface to CAS.
 
-7) Act as a standalone OP.
+7) Act as a standalone OP. A bit wierd for a proxy, but you can do it. :)
 
-8) Act as a standalone IdP.
+8) Act as a standalone IdP.  A bit wierd for a proxy, but you can do it. :)
 
 
 Get up and running in a few steps.
@@ -38,17 +38,13 @@ It is higly recommended to read and understand pyoidc as well as pysaml2 before 
 
 2) Download pyoidc and get [..]pyoidc/oc3/oc_server.py and [..]pyoidc/rp2/rp_server.py up and running.
 
-When your SP can talk to your IdP and your RP is talking to your OP you understand enough to proceed with the proxy.
-The proxy have the same kind of configurations as the clients and servers in pysaml2 and pyoidc. It is also good
-practice to know that the SP, IdP, OP and RP is working before you add a proxy in the middle. You can use any other
-IdP, SP, RP or OP software as well.
+When your SP can talk to your IdP and your RP is talking to your OP you understand enough to proceed with the proxy. The proxy have the same kind of configurations as the clients and servers in pysaml2 and pyoidc. It is also good practice to know that the SP, IdP, OP and RP is working before you add a proxy in the middle. You can use any other IdP, SP, RP or OP software as well.
 
 3) Now get IdProxy and start by running:
-    cd [..]/IdProxy
-    sudo python setup.py install
+   cd [..]/IdProxy
+   sudo python setup.py install
 
-4) Run the script [..]/IdProxy/certgeneration.py to generate self signed certificates or add your own valid
-   certificates in the configuration later on.
+4) Run the script [..]/IdProxy/certgeneration.py to generate self signed certificates or add your own valid certificates in the configuration later on.
 
 5) Copy idp_conf.example to idp_conf.py. Read configuration file and follow the comments.
 
@@ -62,21 +58,22 @@ IdP, SP, RP or OP software as well.
     SP : https://localhost:8999/sp_metadata
     IdP: https://localhost:8999/idp_metadata
 
-10) Configure your SP/RP to use the proxy and configure you IdP to accepts he proxy SP. You must also configure the
-    proxy SP to all the IdP's it can use. All this configuration is performed according to pyoidc and pysaml2
-    documentations.
+10) Configure your SP/RP to use the proxy and configure you IdP to accepts he proxy SP. You must also configure the proxy SP to all the IdP's it can use. All this configuration is performed according to pyoidc and pysaml2 documentations.
 
 
 Work to be done:
 
-1) Implement a OpenID connect and OAuth client in the proxy, to make it possible to use a OpenID connect or OAuth OP
-   as backend.
+1) Implement a OpenID connect and OAuth client in the proxy, to make it possible to use a OpenID connect or OAuth OP as backend.
 
 2) Add a dictionary frontend to the pyYuobitool database for an easier configuration for test environments.
 
 3) Add LDAP to the IdP part of the proxy. LDAP can already be used by the OP part.
 
-4) More documentations, examples and comments of the code.
+4) Improve configuration with standard values, so it is possbile to uncomment parts.
+
+5) Make it possible to start the proxy with only OP or IdP part.
+
+6) More documentations, examples and comments of the code.
 
 
 
