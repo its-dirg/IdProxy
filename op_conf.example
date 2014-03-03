@@ -1,0 +1,167 @@
+# -*- coding: utf-8 -*-
+import os
+import server_conf
+from dirg_util.dict import Sqllite3Dict
+
+
+#Do not change here, perform the changes in server.py.
+PORT = server_conf.PORT
+HTTPS = server_conf.HTTPS
+BASEURL = server_conf.BASEURL
+ISSUER = server_conf.ISSUER
+
+#CAS Settings. Only needed when AUTHORIZATION uses the CAS authentication.
+CAS_SERVER  = "https://my.cas.server.com"
+#No need to change the value.
+CAS_SERVICE_URL = "%s/verify" % ISSUER
+
+#Authorization type. Can be SAML, CAS, YUBIKEY, PASSWORD, PASSWORD_YUBIKEY or MULTIPLEAUTHN.
+#SAML => Will authenticate the user at an external IdP.
+#MULTIPLEAUTHN => Will combine authentication methods.
+AUTHORIZATION = {
+#    "SAML" : {"ACR": "SAML", "WEIGHT": 3, "URL": ISSUER, "USER_INFO": "SAML"},
+#    "CAS" : {"ACR": "CAS", "WEIGHT": 2, "URL": ISSUER, "USER_INFO": "LDAP"},
+#    "YUBIKEY" : {"ACR": "YUBIKEY", "WEIGHT": 1, "URL": ISSUER, "USER_INFO": "SIMPLE"},
+    "PASSWORD" : {"ACR": "PASSWORD", "WEIGHT": 1, "URL": ISSUER, "USER_INFO": "SIMPLE"},
+#    "PASSWORD_YUBIKEY" : {"ACR": "PASSWORD_YUBIKEY", "WEIGHT": 1, "URL": ISSUER, "USER_INFO": "SIMPLE"},
+#    "MULTIPLEAUTHN" : {
+#        "ACR": "MultipleAuthnTest",
+#        "WEIGHT": 4,
+#        "URL": ISSUER,
+#        "USER_INFO": "SAML",
+#        "AUTHNLIST": [
+#            {"ACR": "PASSWORD"},
+#            {"ACR": "CAS"},
+#            {"ACR": "SAML"}
+#        ]
+#
+#    }
+}
+
+
+#Must point to the complete path on disk to this file!
+#No need to change this!
+FULL_PATH = os.path.dirname(os.path.abspath(__file__))
+WORKING_DIR = FULL_PATH + "/"
+
+#A shared server cache for the IdP. The cache expects a dictionary, but you can use a database by implementing the
+#dictionary interface.
+OP_CACHE_1 = {}
+#The cache as a sqlite database.
+#OP_CACHE_1 = Sqllite3Dict(WORKING_DIR + "op_cache1.sqlite3")
+
+#A shared server cache for the IdP. The cache expects a dictionary, but you can use a database by implementing the
+#dictionary interface.
+OP_CACHE_2 = {}
+#The cache as a sqlite database.
+#OP_CACHE_2 = Sqllite3Dict(WORKING_DIR + "op_cache2.sqlite3")
+
+#The yubikey server to be used. This is the official server by yubico.
+YUBIKEY_SERVER = "http://api2.yubico.com/wsapi/2.0/verify"
+#Database for pyYubitool (https://github.com/HaToHo/pyYubitool).
+#You must connect your yubikeys to a user in this database in order to make it work.
+YUBIKEY_DB = WORKING_DIR + "yubikeyconf.db"
+
+#The page in mako/htdocs that will handle user/password login.
+AUTHORIZATIONPAGE_PASSWORD = "op_login_password.mako"
+AUTHORIZATIONPAGE_YUBIKEY = "op_login_yubikey.mako"
+AUTHORIZATIONPAGE_PASSWORD_YUBIKEY = "op_login_password_yubikey.mako"
+
+
+#Symetric key for the OP server. Any phrase will work, but it must be 16 characters.
+SYM_KEY = "0987654321123456"
+
+#Filename for log.
+LOG_FILE='op.log'
+
+#The pyoidc based op server uses cookies to maintain a session.
+#Name of that cookie.
+COOKIENAME= 'pyoic'
+#Time to live for the cookie.
+COOKIETTL = 4*60 # 4 hours
+
+#Private RSA key for the provider
+OP_PRIVATE_KEYS = {
+    "rsa": {
+        "key": "opKeys/localhost.key", #Your RSA PEM PRIVATE KEY
+        "usage": ["enc", "sig"]
+    }
+}
+
+#Path for the public RSA key for the provider
+#The file should contain one row with this content:
+#{"keys": [{"use": "enc", "e": "AQAB", "kty": "RSA", "n": "[RSA PEM PUBLIC KEY STRING]"}, {"use": "sig", "e": "AQAB", "kty": "RSA", "n": "[RSA PEM PUBLIC KEY STRING]"}]}
+#Replace [RSA PEM PUBLIC KEY STRING] with your real public key, or just let certgeneration.py solve it for you.
+OP_PUBLIC_KEYS = "static/jwks.json"
+
+#Setup for how user info will be collected.
+#AUTHORIZATION=SAML overrides this configuration and forces user info to be collect trough SAML.
+#LDAP configurations
+LDAP = {
+    "uri": "ldap://my.ldap.com",
+    "base": "dc=umu, dc=se",
+    "filter_pattern": "(uid=%s)",
+    "user": "",
+    "passwd": "",
+    "attr": ["eduPersonScopedAffiliation", "eduPersonAffiliation"],
+}
+LDAP_EXTRAVALIDATION = {
+    "verify_attr": "eduPersonAffiliation",
+    "verify_attr_valid": ['employee', 'staff', 'student']
+}
+
+
+#If userinfo is LDAP then a LDAP  server is used and if userinfo is SIMPLE the USERDB configuration is used.
+#USERINFO = "SAML"
+#USERINFO = "LDAP"
+USERINFO = "SIMPLE"
+
+#Uid and password for USERINFO = SIMPLE
+PASSWD = {"diana": "krall",
+    "babs": "howes",
+    "upper": "crust"}
+
+
+#Information that can be collected with USERINFO = "SIMPLE"
+USERDB = {
+    "diana": {
+        "user_id": "dikr0001",
+        "name": "Diana Krall",
+        "given_name": "Diana",
+        "family_name": "Krall",
+        "nickname": "Dina",
+        "email": "diana@example.org",
+        "email_verified": False,
+        "phone_number": "+46 90 7865000",
+        "address": {
+            "street_address": "Umeå Universitet",
+            "locality": "Umeå",
+            "postal_code": "SE-90187",
+            "country": "Sweden"
+        },
+    },
+    "babs": {
+        "user_id": "babs0001",
+        "name": "Barbara J Jensen",
+        "given_name": "Barbara",
+        "family_name": "Jensen",
+        "nickname": "babs",
+        "email": "babs@example.com",
+        "email_verified": True,
+        "address": {
+            "street_address": "100 Universal City Plaza",
+            "locality": "Hollywood",
+            "region": "CA",
+            "postal_code": "91608",
+            "country": "USA",
+        },
+    },
+    "upper": {
+        "user_id": "uppe0001",
+        "name": "Upper Crust",
+        "given_name": "Upper",
+        "family_name": "Crust",
+        "email": "uc@example.com",
+        "email_verified": True,
+    }
+}

@@ -1,0 +1,240 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import os
+import server_conf
+from dirg_util.dict import Sqllite3Dict
+from saml2.authn_context import authn_context_class_ref, UNSPECIFIED, PASSWORD
+from saml2 import BINDING_HTTP_REDIRECT, BINDING_URI
+from saml2 import BINDING_HTTP_ARTIFACT
+from saml2 import BINDING_HTTP_POST
+from saml2 import BINDING_SOAP
+from saml2.saml import NAME_FORMAT_URI
+from saml2.saml import NAMEID_FORMAT_TRANSIENT
+from saml2.saml import NAMEID_FORMAT_PERSISTENT
+
+
+#Must point at the correct path to xmlsec1.
+try:
+    from saml2.sigver import get_xmlsec_binary
+except ImportError:
+    get_xmlsec_binary = None
+if get_xmlsec_binary:
+    xmlsec_path = get_xmlsec_binary(["/opt/local/bin","/usr/local/bin"])
+else:
+    xmlsec_path = xmlsec_path = '/usr/local/bin/xmlsec1'
+
+#Please do not change! Change in server_conf.py
+BASE = server_conf.ISSUER
+
+#Must point to the complete path on disk to this file!
+#Needed by the script create_metadata.sh and the IdP to find all configurations.
+#No need to change this!
+FULL_PATH = os.path.dirname(os.path.abspath(__file__))
+
+#This is the directory for the IdP.
+WORKING_DIR = FULL_PATH + "/"
+
+#The yubikey server to be used. This is the official server by yubico.
+YUBIKEY_SERVER = "http://api2.yubico.com/wsapi/2.0/verify"
+#Database for pyYubitool (https://github.com/HaToHo/pyYubitool).
+#You must connect your yubikeys to a user in this database in order to make it work.
+YUBIKEY_DB = WORKING_DIR + "yubikeyconf.db"
+
+#Symetric key for the IdP server. Any phrase will work, but it must be 16 characters!
+SYM_KEY = "098qwerty1123456"
+
+#URL to your CAS server if you wish to perform a CAS authentication.
+CAS_SERVER  = "https://my.cas.server.com"
+
+#A shared server cache for the IdP. The cache expects a dictionary, but you can use a database by implementing the
+#dictionary interface.
+CACHE_1 = {}
+#The cache as a sqlite database.
+#CACHE_1 = Sqllite3Dict(WORKING_DIR + "idp_cache1.sqlite3")
+
+#A shared server cache for the IdP. The cache expects a dictionary, but you can use a database by implementing the
+#dictionary interface.
+CACHE_2 = {}
+#The cache as a sqlite database.
+#CACHE_2 = Sqllite3Dict(WORKING_DIR + "idp_cache2.sqlite3")
+
+#How the IdP server should authenticate the users.
+#SAML => This will authenticate a user at antoher IdP. With other words, the proxy part.
+#MULTIPLEAUTHN => Here you can specify multiple authentication methods. The user will have to authenticate with
+#                 all the methods in the given order.
+AUTHORIZATION = {
+#    "SAML" : {"ACR": authn_context_class_ref(UNSPECIFIED), "WEIGHT": 3, "URL": BASE, "USER_INFO": "SAML"},
+#    "CAS" : {"ACR": authn_context_class_ref(UNSPECIFIED), "WEIGHT": 2, "URL": BASE, "USER_INFO": "LDAP"},
+#    "YUBIKEY" : {"ACR": authn_context_class_ref(UNSPECIFIED), "WEIGHT": 1, "URL": BASE, "USER_INFO": "SIMPLE"},
+     "PASSWORD" : {"ACR": authn_context_class_ref(PASSWORD), "WEIGHT": 1, "URL": BASE, "USER_INFO": "SIMPLE"},
+#    "PASSWORD_YUBIKEY" : {"ACR": authn_context_class_ref(UNSPECIFIED), "WEIGHT": 0, "URL": BASE, "USER_INFO": "SIMPLE"},
+#    "MULTIPLEAUTHN" : {
+#        "ACR": authn_context_class_ref(UNSPECIFIED),
+#        "WEIGHT": 4,
+#        "URL": BASE,
+#        "USER_INFO": "SAML",
+#        "AUTHNLIST": [
+#            {"ACR": "PASSWORD_YUBIKEY"},
+#            {"ACR": "CAS"},
+#            {"ACR": "SAML"}
+#        ]
+#
+#    }
+}
+
+#True if you want to copy the certificate from the calling SP and add it to the call to the underlying SAML IdP.
+#The authn request cannot be signed if this value is true!!!!
+#Only useful if SAML authorization is activated.
+COPYSPCERT = False
+
+#User database as a dictionary. You can offcourse use a database instead, but you must use the same interface
+#as the dictionary below.
+USERS = {
+    "test2": {
+        "sn": "Testsson",
+        "givenName": "Test2",
+        "eduPersonScopedAffiliation": "staff@example.com",
+        "eduPersonPrincipalName": "test2@example.com",
+        "uid": "test2",
+        "eduPersonTargetedID": "qwerty",
+        "c": "SE",
+        "o": "Example Co.",
+        "ou": "IT",
+        "initials": "P",
+        "schacHomeOrganization": "example.com",
+        "email": "test2@example.com",
+        "displayName": "Test2 Testsson",
+        "labeledURL": "http://www.example.com/test2 My homepage",
+        "norEduPersonNIN": "SE199012315555"
+    },
+    "test1": {
+        "sn": "Testsson",
+        "givenName": "Test1",
+        "eduPersonScopedAffiliation": "staff@example.com",
+        "eduPersonPrincipalName": "test1@example.com",
+        "uid": "test1",
+        "eduPersonTargetedID": "qwerty",
+        "c": "SE",
+        "o": "Example Co.",
+        "ou": "IT",
+        "initials": "P",
+        "schacHomeOrganization": "example.com",
+        "email": "test1@example.com",
+        "displayName": "Test1 Testsson",
+        "labeledURL": "http://www.example.com/test My homepage",
+        "norEduPersonNIN": "SE197001012222"
+    },
+}
+EXTRA = {
+    "roland": {
+        "eduPersonEntitlement": "urn:mace:swamid.se:foo:bar",
+        "schacGender": "male",
+        "schacUserPresenceID": "skype:test.test"
+    }
+}
+
+#User/name passwords for password login in the application. It is possible to use a database if you keep the interface.
+PASSWD = {
+    "test1": "ytrewq",
+    "test2": "qwerty"
+}
+
+#This is a pysaml2 configuration dictionary. Please read pysaml2 documentation.
+CONFIG = {
+    "entityid": "%s/idp.xml" % BASE,
+    "description": "My Proxy IDP",
+    "service": {
+        "aa": {
+            "endpoints": {
+                "attribute_service": [
+                    ("%s/attr" % BASE, BINDING_SOAP)
+                ]
+            },
+            "name_id_format": [NAMEID_FORMAT_TRANSIENT,
+                               NAMEID_FORMAT_PERSISTENT]
+        },
+        "aq": {
+            "endpoints": {
+                "authn_query_service": [
+                    ("%s/aqs" % BASE, BINDING_SOAP)
+                ]
+            },
+        },
+        "idp": {
+            "name": "My proxy IdP",
+            "endpoints": {
+                "single_sign_on_service": [
+                    ("%s/sso/redirect" % BASE, BINDING_HTTP_REDIRECT),
+                    ("%s/sso/post" % BASE, BINDING_HTTP_POST),
+                    ("%s/sso/art" % BASE, BINDING_HTTP_ARTIFACT),
+                    ("%s/sso/ecp" % BASE, BINDING_SOAP)
+                ],
+                "single_logout_service": [
+                    ("%s/slo/soap" % BASE, BINDING_SOAP),
+                    ("%s/slo/post" % BASE, BINDING_HTTP_POST),
+                    ("%s/slo/redirect" % BASE, BINDING_HTTP_REDIRECT)
+                ],
+                "artifact_resolve_service": [
+                    ("%s/ars" % BASE, BINDING_SOAP)
+                ],
+                "assertion_id_request_service": [
+                    ("%s/airs" % BASE, BINDING_URI)
+                ],
+                "manage_name_id_service": [
+                    ("%s/mni/soap" % BASE, BINDING_SOAP),
+                    ("%s/mni/post" % BASE, BINDING_HTTP_POST),
+                    ("%s/mni/redirect" % BASE, BINDING_HTTP_REDIRECT),
+                    ("%s/mni/art" % BASE, BINDING_HTTP_ARTIFACT)
+                ],
+                "name_id_mapping_service": [
+                    ("%s/nim" % BASE, BINDING_SOAP),
+                ],
+            },
+            "policy": {
+                "default": {
+                    "lifetime": {"minutes": 15},
+                    "attribute_restrictions": None, # means all I have
+                    "name_form": NAME_FORMAT_URI,
+                    "entity_categories": ["swamid", "edugain"]
+                },
+            },
+            "subject_data": "./idp.subject",
+            "name_id_format": [NAMEID_FORMAT_TRANSIENT,
+                               NAMEID_FORMAT_PERSISTENT]
+        },
+    },
+    "debug": 1,
+    "key_file":  WORKING_DIR+"idp_cert/localhost.key", #Here you should point out your private key for the certificate.
+    "cert_file":  WORKING_DIR+"idp_cert/localhost.crt", #Here you should point out your certificate.
+    "metadata": {
+        "local": ["[..]/sp.xml"],
+    },
+    "organization": {
+        "display_name": "Test organisation",
+        "name": "Test organisation",
+        "url": "http://www.test.test",
+    },
+    "contact_person": [
+        {
+            "contact_type": "technical",
+            "given_name": "Test",
+            "sur_name": "Testsson",
+            "email_address": "test.testsson@test.test"
+        }, {
+            "contact_type": "support",
+            "given_name": "Support",
+            "email_address": "support@test.test"
+        },
+    ],
+    "xmlsec_binary": xmlsec_path,
+    "logger": {
+        "rotating": {
+            "filename": "idp.log",
+            "maxBytes": 500000,
+            "backupCount": 5,
+        },
+        "loglevel": "debug",
+    }
+}
+
