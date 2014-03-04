@@ -6,11 +6,11 @@ PORT=8999
 HTTPS=True
 
 #Server hostname
-BASEURL="localhost"
+HOST="localhost"
 if HTTPS:
-    BASEURL = "https://%s" % BASEURL
+    BASEURL = "https://%s" % HOST
 else:
-    BASEURL = "http://%s" % BASEURL
+    BASEURL = "http://%s" % HOST
 
 #Full URL to the OP server
 ISSUER = "%s:%s" % (BASEURL, PORT)

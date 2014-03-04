@@ -28,8 +28,9 @@ DISCOSRV = None
 WAYF = None
 
 #Changes should be performed in server_conf.py.
-PORT=server_conf.PORT
-HTTPS=server_conf.HTTPS
+PORT = server_conf.PORT
+HTTPS = server_conf.HTTPS
+HOST = server_conf.HOST
 BASEURL = server_conf.BASEURL
 
 #Full URL to the SP.
@@ -71,6 +72,9 @@ CACHE = {}
 #If the assertion is encrypted for the desination SP you have to copy the complete assertion.
 #Set this value to true. This is a special case and the normal value is false!
 COPY_ASSERTION = False
+
+#The amount of time in minutes an SP cert will be saved in the cache.
+CERT_TIMEOUT = 15
 
 #True if you want to anonymize the assertion form the IdP.
 #If COPY_ASSERTION is true this flag is of no use.
