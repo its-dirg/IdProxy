@@ -1,5 +1,6 @@
 __author__ = 'haho0032'
 from urlparse import parse_qs
+
 from saml2 import BINDING_HTTP_REDIRECT
 from saml2 import BINDING_SOAP
 from saml2 import BINDING_HTTP_ARTIFACT
@@ -10,8 +11,9 @@ from saml2.httputil import BadRequest
 from saml2.httputil import Unauthorized
 from saml2.httputil import Redirect
 
+
 class Service(object):
-    def __init__(self, environ, start_response,logger, user=None):
+    def __init__(self, environ, start_response, logger, user=None):
         self.environ = environ
         logger.debug("ENVIRON: %s" % environ)
         self.start_response = start_response

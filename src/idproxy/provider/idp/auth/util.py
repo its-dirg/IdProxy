@@ -8,6 +8,7 @@ import logging
 
 logger = logging.getLogger("pyOpSamlProxy.provider.idp.auth.util")
 
+
 class IdPAuthentication(object):
     QUERY_PARAM = "query"
     AUTHN_REFERENCE_PARAM = "authn_reference"
@@ -42,10 +43,10 @@ class IdPAuthentication(object):
                     return query_dict[self.AUTHN_REFERENCE_PARAM]
         return None
 
-    def encrypt_dict(self, dict):
+    def encrypt_dict(self, dictionary):
         message = ""
         first = True
-        for key, value in dict.iteritems():
+        for key, value in dictionary.iteritems():
             if not first:
                 message += ","
             message += key + "::" + value
@@ -53,16 +54,15 @@ class IdPAuthentication(object):
         return self.aes.encrypt(message)
 
     def decrypt_dict(self, message):
-        dict = {}
+        dictionary = {}
         if message is not None and len(message) > 1:
             message = self.aes.decrypt(message)
             items = message.split(",")
             for item in items:
                 values = item.split("::")
                 if len(values) == 2:
-                    dict[values[0]] = values[1]
-        return dict
-
+                    dictionary[values[0]] = values[1]
+        return dictionary
 
     def setup_idp(self, user, reference, redirect_uri, key):
         uid = rndstr(24)

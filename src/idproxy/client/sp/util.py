@@ -22,6 +22,7 @@ from saml2.s_utils import UnsupportedBinding
 from saml2.s_utils import sid
 from saml2.s_utils import rndstr
 
+
 class EcpResponse(object):
     code = 200
     title = 'OK'
@@ -35,6 +36,7 @@ class EcpResponse(object):
                        [('Content-Type', "text/xml")])
         return [self.content]
 
+
 #This class represents a cache between the SSO and ACS class.
 #The SSO setup a call to a IdP and when the IdP response with a POST or REDIRECT to the ACS
 #it has to remember outstanding outstanding queries to the IdP as well as relay state to perform validations.
@@ -45,8 +47,9 @@ class Cache(object):
         self.relay_state = {}
         self.certificates = {}
 
+
 class SSO(object):
-    def __init__(self, sp, environ, start_response,logger, cache=None,
+    def __init__(self, sp, environ, start_response, logger, cache=None,
                  wayf=None, discosrv=None, bindings=None):
         self.sp = sp
         self.environ = environ
@@ -183,14 +186,13 @@ class SSO(object):
         self.logger.info("Chosen IdP: '%s'" % idp_entity_id)
         return 0, idp_entity_id
 
-
     def _redirect_to_auth(self, _cli, entity_id, came_from, vorg_name="", cert_str=None):
         try:
             _binding, destination = _cli.pick_binding(
                 "single_sign_on_service", self.bindings, "idpsso",
                 entity_id=entity_id)
             self.logger.debug("binding: %s, destination: %s" % (_binding,
-                                                           destination))
+                                                                destination))
             if _cli.authn_requests_signed:
                 _sid = saml2.s_utils.sid(_cli.seed)
                 msg_str = _cli.create_authn_request(destination, vorg=vorg_name, sign=_cli.authn_requests_signed,

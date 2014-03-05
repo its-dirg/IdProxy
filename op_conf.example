@@ -11,7 +11,7 @@ BASEURL = server_conf.BASEURL
 ISSUER = server_conf.ISSUER
 
 #CAS Settings. Only needed when AUTHORIZATION uses the CAS authentication.
-CAS_SERVER  = "https://my.cas.server.com"
+CAS_SERVER = "https://my.cas.server.com"
 #No need to change the value.
 CAS_SERVICE_URL = "%s/verify" % ISSUER
 
@@ -19,12 +19,12 @@ CAS_SERVICE_URL = "%s/verify" % ISSUER
 #SAML => Will authenticate the user at an external IdP.
 #MULTIPLEAUTHN => Will combine authentication methods.
 AUTHORIZATION = {
-#    "SAML" : {"ACR": "SAML", "WEIGHT": 3, "URL": ISSUER, "USER_INFO": "SAML"},
-#    "CAS" : {"ACR": "CAS", "WEIGHT": 2, "URL": ISSUER, "USER_INFO": "LDAP"},
-#    "YUBIKEY" : {"ACR": "YUBIKEY", "WEIGHT": 1, "URL": ISSUER, "USER_INFO": "SIMPLE"},
-    "PASSWORD" : {"ACR": "PASSWORD", "WEIGHT": 1, "URL": ISSUER, "USER_INFO": "SIMPLE"},
-#    "PASSWORD_YUBIKEY" : {"ACR": "PASSWORD_YUBIKEY", "WEIGHT": 1, "URL": ISSUER, "USER_INFO": "SIMPLE"},
-#    "MULTIPLEAUTHN" : {
+#    "SAML": {"ACR": "SAML", "WEIGHT": 3, "URL": ISSUER, "USER_INFO": "SAML"},
+#    "CAS": {"ACR": "CAS", "WEIGHT": 2, "URL": ISSUER, "USER_INFO": "LDAP"},
+#    "YUBIKEY": {"ACR": "YUBIKEY", "WEIGHT": 1, "URL": ISSUER, "USER_INFO": "SIMPLE"},
+    "PASSWORD": {"ACR": "PASSWORD", "WEIGHT": 1, "URL": ISSUER, "USER_INFO": "SIMPLE"},
+#    "PASSWORD_YUBIKEY": {"ACR": "PASSWORD_YUBIKEY", "WEIGHT": 1, "URL": ISSUER, "USER_INFO": "SIMPLE"},
+#    "MULTIPLEAUTHN": {
 #        "ACR": "MultipleAuthnTest",
 #        "WEIGHT": 4,
 #        "URL": ISSUER,
@@ -72,18 +72,19 @@ AUTHORIZATIONPAGE_PASSWORD_YUBIKEY = "op_login_password_yubikey.mako"
 SYM_KEY = "0987654321123456"
 
 #Filename for log.
-LOG_FILE='op.log'
+LOG_FILE = 'op.log'
 
 #The pyoidc based op server uses cookies to maintain a session.
 #Name of that cookie.
-COOKIENAME= 'pyoic'
-#Time to live for the cookie.
-COOKIETTL = 4*60 # 4 hours
+COOKIENAME = 'pyoic'
+#Time to live for the cookie. (4 hours)
+COOKIETTL = 4*60
 
 #Private RSA key for the provider
 OP_PRIVATE_KEYS = {
     "rsa": {
-        "key": "opKeys/localhost.key", #Your RSA PEM PRIVATE KEY
+        #Your RSA PEM PRIVATE KEY
+        "key": "opKeys/localhost.key",
         "usage": ["enc", "sig"]
     }
 }
@@ -117,9 +118,11 @@ LDAP_EXTRAVALIDATION = {
 USERINFO = "SIMPLE"
 
 #Uid and password for USERINFO = SIMPLE
-PASSWD = {"diana": "krall",
+PASSWD = {
+    "diana": "krall",
     "babs": "howes",
-    "upper": "crust"}
+    "upper": "crust"
+}
 
 
 #Information that can be collected with USERINFO = "SIMPLE"

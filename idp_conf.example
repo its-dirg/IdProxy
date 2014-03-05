@@ -20,7 +20,7 @@ try:
 except ImportError:
     get_xmlsec_binary = None
 if get_xmlsec_binary:
-    xmlsec_path = get_xmlsec_binary(["/opt/local/bin","/usr/local/bin"])
+    xmlsec_path = get_xmlsec_binary(["/opt/local/bin", "/usr/local/bin"])
 else:
     xmlsec_path = xmlsec_path = '/usr/local/bin/xmlsec1'
 
@@ -45,7 +45,7 @@ YUBIKEY_DB = WORKING_DIR + "yubikeyconf.db"
 SYM_KEY = "098qwerty1123456"
 
 #URL to your CAS server if you wish to perform a CAS authentication.
-CAS_SERVER  = "https://my.cas.server.com"
+CAS_SERVER = "https://my.cas.server.com"
 
 #A shared server cache for the IdP. The cache expects a dictionary, but you can use a database by implementing the
 #dictionary interface.
@@ -64,23 +64,23 @@ CACHE_2 = {}
 #MULTIPLEAUTHN => Here you can specify multiple authentication methods. The user will have to authenticate with
 #                 all the methods in the given order.
 AUTHORIZATION = {
-#    "SAML" : {"ACR": authn_context_class_ref(UNSPECIFIED), "WEIGHT": 3, "URL": BASE, "USER_INFO": "SAML"},
-#    "CAS" : {"ACR": authn_context_class_ref(UNSPECIFIED), "WEIGHT": 2, "URL": BASE, "USER_INFO": "LDAP"},
-#    "YUBIKEY" : {"ACR": authn_context_class_ref(UNSPECIFIED), "WEIGHT": 1, "URL": BASE, "USER_INFO": "SIMPLE"},
-     "PASSWORD" : {"ACR": authn_context_class_ref(PASSWORD), "WEIGHT": 1, "URL": BASE, "USER_INFO": "SIMPLE"},
-#    "PASSWORD_YUBIKEY" : {"ACR": authn_context_class_ref(UNSPECIFIED), "WEIGHT": 0, "URL": BASE, "USER_INFO": "SIMPLE"},
-#    "MULTIPLEAUTHN" : {
-#        "ACR": authn_context_class_ref(UNSPECIFIED),
-#        "WEIGHT": 4,
-#        "URL": BASE,
-#        "USER_INFO": "SAML",
-#        "AUTHNLIST": [
-#            {"ACR": "PASSWORD_YUBIKEY"},
-#            {"ACR": "CAS"},
-#            {"ACR": "SAML"}
-#        ]
-#
-#    }
+    #"SAML": {"ACR": authn_context_class_ref(UNSPECIFIED), "WEIGHT": 3, "URL": BASE, "USER_INFO": "SAML"},
+    #"CAS": {"ACR": authn_context_class_ref(UNSPECIFIED), "WEIGHT": 2, "URL": BASE, "USER_INFO": "LDAP"},
+    #"YUBIKEY": {"ACR": authn_context_class_ref(UNSPECIFIED), "WEIGHT": 1, "URL": BASE, "USER_INFO": "SIMPLE"},
+     "PASSWORD": {"ACR": authn_context_class_ref(PASSWORD), "WEIGHT": 1, "URL": BASE, "USER_INFO": "SIMPLE"},
+    #"PASSWORD_YUBIKEY": {"ACR": authn_context_class_ref(UNSPECIFIED), "WEIGHT": 0, "URL": BASE, "USER_INFO": "SIMPLE"},
+    #"MULTIPLEAUTHN": {
+    #    "ACR": authn_context_class_ref(UNSPECIFIED),
+    #    "WEIGHT": 4,
+    #    "URL": BASE,
+    #    "USER_INFO": "SAML",
+    #    "AUTHNLIST": [
+    #        {"ACR": "PASSWORD_YUBIKEY"},
+    #        {"ACR": "CAS"},
+    #        {"ACR": "SAML"}
+    #    ]
+    #
+    #}
 }
 
 #True if you want to copy the certificate from the calling SP and add it to the call to the underlying SAML IdP.
@@ -194,7 +194,7 @@ CONFIG = {
             "policy": {
                 "default": {
                     "lifetime": {"minutes": 15},
-                    "attribute_restrictions": None, # means all I have
+                    "attribute_restrictions": None,  # means all I have
                     "name_form": NAME_FORMAT_URI,
                     "entity_categories": ["swamid", "edugain"]
                 },
@@ -205,8 +205,8 @@ CONFIG = {
         },
     },
     "debug": 1,
-    "key_file":  WORKING_DIR+"idp_cert/localhost.key", #Here you should point out your private key for the certificate.
-    "cert_file":  WORKING_DIR+"idp_cert/localhost.crt", #Here you should point out your certificate.
+    "key_file":  WORKING_DIR+"idp_cert/localhost.key",  #Here you should point out your private key for the certificate.
+    "cert_file":  WORKING_DIR+"idp_cert/localhost.crt",  #Here you should point out your certificate.
     "metadata": {
         "local": ["[..]/sp.xml"],
     },

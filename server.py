@@ -1,11 +1,6 @@
-from oic.utils.keyio import KeyBundle
-from saml2.metadata import create_metadata_string
-import idp_conf
 from idproxy.client.sp.handler import SpHandler
 from idproxy.provider.idp.handler import IdPHandler
-from idproxy.provider.idp.util import Cache
 import server_conf
-import sp_conf
 
 __author__ = 'haho0032'
 #Imports within the project

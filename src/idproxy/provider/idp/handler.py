@@ -1,14 +1,15 @@
 import importlib
+
 from saml2.httputil import Unauthorized
 from saml2.metadata import create_metadata_string
-import idproxy
+from dirg_util.http_util import HttpHandler
+
 from idproxy.provider.idp.auth.cas import CasAuth
 from idproxy.provider.idp.auth.multiple import MultipleAuthentication
 from idproxy.provider.idp.auth.password import PasswordYubikeyAuth
 from idproxy.provider.idp.auth.sp import SpAuthentication
 from idproxy.provider.idp.auth.unspecified import UnspecifiedAuth
-from idproxy.provider.op.util import MultipleAuthHandler
-from dirg_util.http_util import HttpHandler
+
 
 __author__ = 'haho0032'
 import server_conf
@@ -20,10 +21,9 @@ from Cookie import SimpleCookie
 from saml2 import server
 from saml2 import time_util
 from saml2.authn_context import AuthnBroker
-from saml2.authn_context import PASSWORD
 from saml2.authn_context import UNSPECIFIED
 from saml2.authn_context import authn_context_class_ref
-from idproxy.provider.idp.util import  Cache
+from idproxy.provider.idp.util import Cache
 from idproxy.provider.idp.util import SSO
 from idproxy.provider.idp.util import SLO
 from idproxy.provider.idp.util import AIDR
@@ -37,6 +37,7 @@ from idproxy.provider.idp.util import AuthCookie
 
 #Add a logger for this class.
 logger = logging.getLogger("pyOpSamlProxy.provider.idp.util")
+
 
 #This class is responsible for wrapping a pysaml2 IdP implementation.
 class IdPHandler:
@@ -131,7 +132,8 @@ class IdPHandler:
             (r'sso/ecp$', (SSO, "ecp")),
         ]
         self.sphandler = sphandler
-        self.idp_metadata = create_metadata_string(args.idpconfig + ".py", self.idp_server.config, args.valid, args.cert,
+        self.idp_metadata = create_metadata_string(args.idpconfig + ".py", self.idp_server.config, args.valid,
+                                                   args.cert,
                                                    args.keyfile, args.id_idp, args.name_idp, args.sign)
 
     def setup_authn_broker(self, base_url, sphandler, authorization):
@@ -141,7 +143,7 @@ class IdPHandler:
         password_auth = PasswordYubikeyAuth(self, self.passwd, self.user_info, self.extra_info, password=True,
                                             yubikey=False)
         yubikey_auth = PasswordYubikeyAuth(self, self.passwd, self.user_info, self.extra_info, password=False,
-                                                yubikey=True)
+                                           yubikey=True)
         password_yubikey_auth = PasswordYubikeyAuth(self, self.passwd, self.user_info, self.extra_info, password=True,
                                                     yubikey=True)
         for authkey, value in authorization.items():
@@ -238,12 +240,14 @@ class IdPHandler:
             if morsel:
                 try:
                     decoded = base64.b64decode(morsel.value)
+                    key = None
+                    ref = None
                     try:
                         key, ref = base64.b64decode(morsel.value).split(":")
                     except:
                         if decoded is not None:
                             return decoded
-                    return (key, ref)
+                    return key, ref
                 except KeyError:
                     pass
             else:
@@ -296,7 +300,6 @@ class IdPHandler:
         else:
             # validity time should match lifetime of assertions
             return time_util.in_a_while(minutes=timeout, format=tformat)
-
 
     def do_verify(self, environ, start_response, _):
         query = HttpHandler.query_dictionary(environ)

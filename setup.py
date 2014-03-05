@@ -13,7 +13,7 @@ setup(
     classifiers = ["Development Status :: 0.1 - Beta",
         "License :: OSI Approved :: Apache Software License",
         "Topic :: Software Development :: Libraries :: Python Modules"],
-    install_requires = ['pyoidc', 'requests', "pycrypto",
+    install_requires = ['oic', 'pyoidc', 'requests', "pycrypto",
                         "cherrypy", "mako", "pyjwkest", "beaker"],
 
     zip_safe=False,

@@ -3,16 +3,17 @@ import urllib
 __author__ = 'haho0032'
 import logging
 from saml2.httputil import Redirect, Unauthorized
-from idproxy.client.sp.handler import SpHandler
 from dirg_util.http_util import HttpHandler
 from dirg_util.session import Session
 from idproxy.provider.idp.auth.util import IdPAuthentication
 
 logger = logging.getLogger("pyOpSamlProxy.provider.idp.auth.sp")
 
+
 class MultipleAuthentication(IdPAuthentication):
     MULTIPLEAUTHENTICATIONREDIRECT = "MULTIPLEAUTHENTICATIONREDIRECT"
     MUTLIPLEAUTHENTICATIONCOUNTER = "MUTLIPLEAUTHENTICATIONCOUNTER"
+
     def __init__(self, idphandler, auth_list):
         IdPAuthentication.__init__(self, idphandler)
         self.auth_list = auth_list
@@ -30,9 +31,9 @@ class MultipleAuthentication(IdPAuthentication):
                         tmpparamstr = ""
                     else:
                         tmpparamstr += "&"
-                    tmpparamstr = urllib.urlencode({tmpkey:  v})
+                    tmpparamstr = urllib.urlencode({tmpkey: v})
             else:
-                tmpparamstr = urllib.urlencode({tmpkey:  value})
+                tmpparamstr = urllib.urlencode({tmpkey: value})
             if paramstr is None:
                 paramstr = "?"
             else:
@@ -50,7 +51,6 @@ class MultipleAuthentication(IdPAuthentication):
             return resp(environ, start_response)
         else:
             return self.auth_list[authn_method].authenticate(environ, start_response, reference, key, redirect_uri)
-
 
     def verify(self, environ, start_response):
         session = Session(environ)

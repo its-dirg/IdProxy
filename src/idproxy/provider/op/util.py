@@ -1,7 +1,10 @@
 from oic.utils.authn.user import UserAuthnMethod
+
 from idproxy.client.sp.handler import UserInfoSpHandler
 
+
 __author__ = 'haho0032'
+
 
 #Returns user_info for the designated authentication method. In the proxy is different authentication methods
 #considered to be different users even though it is the same person that have several accounts.
@@ -10,7 +13,7 @@ class UserInfoAuthHandler(object):
         """
         Returns the attributes collected by the SpHandler.
         :param ophandler: The OpHandler class object.
-        :param auth_user_info_map: A dictionary with auth as key and user_info object as value.
+        :param user_info_auth_map: A dictionary with auth as key and user_info object as value.
         """
         self.ophandler = ophandler
         self.user_info_auth_map = user_info_auth_map
@@ -35,7 +38,8 @@ class UserInfoAuthHandler(object):
         :param kwargs: Not used.
         :return: User info as a key value dictionary.
         """
-        return self.user_info_auth_map[self.ophandler.get_op_handler_cache(userid).auth](userid, user_info_claims, **kwargs)
+        return self.user_info_auth_map[self.ophandler.get_op_handler_cache(userid).auth](userid, user_info_claims,
+                                                                                         **kwargs)
 
 
 #This class is a authentication class for oic.oic.provider.Provider.
@@ -44,6 +48,7 @@ class UserInfoAuthHandler(object):
 class MultipleAuthHandler(UserAuthnMethod):
     #Session name for the authentication method counter.
     MULTIPLEAUTHHANDLER_COUNTER = "MULTIPLEAUTHHANDLER_COUNTER"
+
     def __init__(self, auth_handler_list):
         """
         Constructor.
@@ -68,7 +73,6 @@ class MultipleAuthHandler(UserAuthnMethod):
                     item.srv = srv
         except:
             pass
-
 
     def __call__(self, **authn_args):
         """
@@ -104,19 +108,18 @@ class MultipleAuthHandler(UserAuthnMethod):
                 new_headers = []
                 #Remove the authentication cookie if it exists to move on to the next authentication method
                 #in the list.
-                for tuple in resp.headers:
+                for _tuple in resp.headers:
                     append = True
-                    if tuple is not None and tuple[0] == 'Set-Cookie':
+                    if _tuple is not None and _tuple[0] == 'Set-Cookie':
                         try:
-                            identity = authn.authenticated_as(tuple[1])
+                            identity = authn.authenticated_as(_tuple[1])
                             if identity["uid"] is not None:
-                                self.ophandler.session["MULTIPLEAUTHHANDLER_COUNTER"] = \
-                                    self.ophandler.session["MULTIPLEAUTHHANDLER_COUNTER"] + 1
+                                self.ophandler.session["MULTIPLEAUTHHANDLER_COUNTER"] += 1
                                 append = False
                         except:
                             pass
                     if append:
-                        new_headers.append(tuple)
+                        new_headers.append(_tuple)
                 resp.headers = new_headers
             else:
                 #Make sure the user never can skip a step.

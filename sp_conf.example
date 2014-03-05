@@ -18,7 +18,7 @@ try:
 except ImportError:
     get_xmlsec_binary = None
 if get_xmlsec_binary:
-    xmlsec_path = get_xmlsec_binary(["/opt/local/bin","/usr/local/bin"])
+    xmlsec_path = get_xmlsec_binary(["/opt/local/bin", "/usr/local/bin"])
 else:
     xmlsec_path = '/usr/local/bin/xmlsec1'
 
@@ -38,17 +38,17 @@ ISSUER = "%s:%s" % (BASEURL, PORT)
 BASE = ISSUER
 
 #The base url for the SP at the server.
-SPVERIFYBASE= "spverify"
+SPVERIFYBASE = "spverify"
 
 #The base url for verification of the response from a IdP.
-SPVERIFYBASEIDP= "idpspverify"
+SPVERIFYBASEIDP = "idpspverify"
 
 #The BASE url where the Idp performs the redirect after a authn request from the SP.
 #For the cookies to work do not use subfolders.
-ASCREDIRECT='acsredirect'
+ASCREDIRECT = 'acsredirect'
 #The BASE url where the Idp performs a post after a authn request from the SP.
 #For the cookies to work do not use subfolders.
-ASCPOST='acspost'
+ASCPOST = 'acspost'
 
 #Regual expression to match a post from Idp to SP.
 ASCVERIFYPOSTLIST = [ASCPOST + "/(.*)$", ASCPOST + "$"]

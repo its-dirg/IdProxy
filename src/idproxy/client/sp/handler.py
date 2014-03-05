@@ -1,12 +1,12 @@
 import hashlib
 import importlib
 import datetime
-from dirg_util.http_util import HttpHandler, make_cookie, parse_cookie
-from dirg_util.session import Session
+
+from dirg_util.http_util import HttpHandler
 from saml2 import BINDING_HTTP_POST
 from saml2.metadata import create_metadata_string
 from saml2.response import AuthnResponse
-from saml2.s_utils import sid
+
 
 __author__ = 'haho0032'
 import json
@@ -59,21 +59,20 @@ class SpHandler:
 
     SPHANDLERFORUID = "uid"
 
-
     SPHANDLERVERIFYTYPE = "SPHANDLERVERIFYTYPE"
 
-    def __init__(self, logger, args):
+    def __init__(self, sp_logger, args):
         """
         Constructor for the SpHandler.
-        :param logger: A logger.
+        :param sp_logger: A logger.
         """
         #Metadata for the SP
         self.sp_metadata = create_metadata_string(args.spconf + ".py", None, args.valid, args.cert, args.keyfile,
                                                   args.id_sp, args.name_sp, args.sign)
         #Log class. (see import logging)
-        self.logger = logger
+        self.logger = sp_logger
         #Configurations for the SP handler. (pyOpSamlProxy.client.sp.conf)
-        self.sp_conf = importlib.import_module(args.spconf)#pyOpSamlProxy.client.sp.conf
+        self.sp_conf = importlib.import_module(args.spconf)  #pyOpSamlProxy.client.sp.conf
         #Name of the configuration file. See above.
         self.sp_conf_name = self.sp_conf.WORKING_DIR + args.spconf
         #SP configuration object. (See project pysaml2; saml2.client.Saml2Client)
@@ -213,10 +212,10 @@ class SpHandler:
     def certificate_cache(self):
         if self.certificate_cache_name not in self.sphandlercache:
             self.sphandlercache[self.certificate_cache_name] = {}
-            self.sphandlercache[self.certificate_cache_name+"clear"] = datetime.datetime.now() + \
-                                                                       datetime.timedelta(minutes =
-                                                                                          self.sp_conf.CERT_TIMEOUT)
-        elif self.sphandlercache[self.certificate_cache_name+"clear"] < datetime.datetime.now():
+            self.sphandlercache[self.certificate_cache_name + "clear"] = datetime.datetime.now() + \
+                                                                         datetime.timedelta(minutes=
+                                                                                            self.sp_conf.CERT_TIMEOUT)
+        elif self.sphandlercache[self.certificate_cache_name + "clear"] < datetime.datetime.now():
             for key, value in self.sphandlercache[self.certificate_cache_name].iteritems():
                 if not (value["timeout"] > datetime.datetime.now()):
                     del self.sphandlercache[self.certificate_cache_name][key]
@@ -228,17 +227,16 @@ class SpHandler:
             _sid = sid()
         cache = self.certificate_cache()
         cache[_sid] = {
-            "timeout" : datetime.datetime.now() + datetime.timedelta(minutes = self.sp_conf.CERT_TIMEOUT),
-            "cert" : base64.b64encode(certificate_str)
+            "timeout": datetime.datetime.now() + datetime.timedelta(minutes=self.sp_conf.CERT_TIMEOUT),
+            "cert": base64.b64encode(certificate_str)
         }
         self.sphandlercache[self.certificate_cache_name] = cache
         return _sid
 
-    def certificate_from_cache(self, sid):
-        if sid in self.certificate_cache():
-            return base64.b64decode(self.certificate_cache()[sid]["cert"])
+    def certificate_from_cache(self, uid):
+        if uid in self.certificate_cache():
+            return base64.b64decode(self.certificate_cache()[uid]["cert"])
         return None
-
 
     def handle_idp_response(self, response, cookie, session):
         """
@@ -312,13 +310,13 @@ class SpHandler:
                         try:
 
                             kwargs = {
-                            "outstanding_queries": session[self.SPHANDLERSSOCACHE].outstanding_queries,
-                            "allow_unsolicited": self.sp.allow_unsolicited,
-                            "want_assertions_signed": False,
-                            "return_addrs": self.sp.service_urls(),
-                            "entity_id": self.sp.config.entityid,
-                            "attribute_converters": self.sp.config.attribute_converters,
-                            "allow_unknown_attributes": self.sp.config.allow_unknown_attributes,
+                                "outstanding_queries": session[self.SPHANDLERSSOCACHE].outstanding_queries,
+                                "allow_unsolicited": self.sp.allow_unsolicited,
+                                "want_assertions_signed": False,
+                                "return_addrs": self.sp.service_urls(),
+                                "entity_id": self.sp.config.entityid,
+                                "attribute_converters": self.sp.config.attribute_converters,
+                                "allow_unknown_attributes": self.sp.config.allow_unknown_attributes,
                             }
                             authn_response = AuthnResponse(self.sp.sec, **kwargs)
 
@@ -335,14 +333,13 @@ class SpHandler:
                             xmlstr_list = xmlstr.split(split_name)
 
                             start_index = (xmlstr_list[0][::-1].find("<") + 1) * -1
-                            str_assertion = xmlstr_list[0][start_index:] + split_name + xmlstr_list[1] + split_name + ">"
-
+                            str_assertion = xmlstr_list[0][start_index:] + split_name + xmlstr_list[
+                                1] + split_name + ">"
 
                             str_encrypted_assertion = None
                             if split_name == "EncryptedAssertion":
                                 str_encrypted_assertion = str_assertion
                                 str_assertion = None
-
 
                             """
                             authn_response = authn_response.loads(xmlstr, False)
@@ -359,16 +356,16 @@ class SpHandler:
                                 sp_handler_cache = SpHandlerCache()
                             sp_handler_cache.uid = uid
                             sp_handler_cache.timeout = authn_response.not_on_or_after
-                            sp_handler_cache.attributes = {'eduPersonPrincipalName':
-                                                           [hashlib.sha256(Random.new().read(24)).hexdigest()]}
+                            sp_handler_cache.attributes = {
+                                'eduPersonPrincipalName': [hashlib.sha256(Random.new().read(24)).hexdigest()]
+                            }
                             sp_handler_cache.assertion = str_assertion
                             sp_handler_cache.encrypted_assertion = str_encrypted_assertion
                             sp_handler_cache.auth = True
                             self.set_sp_handler_cache(uid, sp_handler_cache)
 
-
                             session[SpHandler.SPHANDLERFORUID] = uid
-                            resp =  self.sp_authentication.authn_redirect(environ)
+                            resp = self.sp_authentication.authn_redirect(environ)
                             return resp(environ, start_response)
                             #resp = self.sp._parse_response(_dict["SAMLResponse"], AuthnResponse,
                             #   "assertion_consumer_service",BINDING_HTTP_POST, **kwargs)

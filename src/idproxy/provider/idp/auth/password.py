@@ -2,19 +2,19 @@ from auth.form import DirgUsernamePasswordYubikeyMako
 
 __author__ = 'haho0032'
 import logging
-from saml2.httputil import Unauthorized, Redirect, Response
+from saml2.httputil import Unauthorized
 from idproxy.provider.idp.auth.util import IdPAuthentication
 from dirg_util.http_util import HttpHandler
-from saml2.s_utils import rndstr
+
 logger = logging.getLogger("pyOpSamlProxy.provider.idp.util")
 
-class PasswordYubikeyAuth(IdPAuthentication):
 
-    def __init__(self, idphandler, passwd, user_info, extra_info, password= True, yubikey=False):
+class PasswordYubikeyAuth(IdPAuthentication):
+    def __init__(self, idphandler, passwd, user_info, extra_info, password=True, yubikey=False):
         IdPAuthentication.__init__(self, idphandler)
         self.passwd = passwd
         self.user_info = user_info
-        self.extra_info = user_info
+        self.extra_info = extra_info
         yubikey_db = None
         yubikey_server = None
         yubikey_otp_parameter = None
@@ -26,7 +26,7 @@ class PasswordYubikeyAuth(IdPAuthentication):
             yubikey_db = idphandler.yubikey_db
             yubikey_server = idphandler.yubikey_server
             yubikey_otp_parameter = "otp"
-            mako_file = "yubikeylogin.mako"
+            #mako_file = "yubikeylogin.mako"
             mako_file = "idplogin_yubikey.mako"
         if yubikey and password:
             mako_file = "idplogin_password_yubikey.mako"
@@ -43,7 +43,6 @@ class PasswordYubikeyAuth(IdPAuthentication):
 
     def authenticate(self, environ, start_response, reference, key, redirect_uri, **kwargs):
         logger.info("The login page")
-        headers = []
         query = {
             "key": key,
             self.AUTHN_REFERENCE_PARAM: reference,
@@ -66,10 +65,9 @@ class PasswordYubikeyAuth(IdPAuthentication):
         try:
             valid, uid, parameters = self.auth_helper.verify(query)
         except (AssertionError, KeyError):
-            return False
+            return valid
 
         return valid
-
 
     def verify(self, environ, start_response):
         request = HttpHandler.query_dictionary(environ)
@@ -85,7 +83,7 @@ class PasswordYubikeyAuth(IdPAuthentication):
             resp = Unauthorized("Unknown user or wrong password")
         else:
             if len(query) != 3 and self.AUTHN_REFERENCE_PARAM not in query or "redirect_uri" not in query or \
-                            "key" not in query:
+               "key" not in query:
                 resp = Unauthorized("Unknown user or wrong password")
             else:
                 resp = self.setup_idp(user, query[self.AUTHN_REFERENCE_PARAM], query["redirect_uri"], query["key"])

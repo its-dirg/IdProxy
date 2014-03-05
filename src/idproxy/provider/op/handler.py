@@ -6,6 +6,7 @@ import re
 import traceback
 import sys
 from urlparse import parse_qs
+
 from oic.utils import http_util
 from oic.utils.http_util import wsgi_wrapper
 from oic.utils.sdb import SessionDB
@@ -25,6 +26,7 @@ from oic.utils.userinfo import UserInfo
 from oic.utils.authn.user_cas import CasAuthnMethod
 from oic.utils.authn.ldap_member import UserLDAPMemberValidation
 from dirg_util.http_util import HttpHandler
+
 from idproxy.client.sp.handler import UserInfoSpHandler
 from idproxy.provider.op.util import UserInfoAuthHandler, MultipleAuthHandler
 
@@ -35,6 +37,7 @@ class OpHandlerCache:
         #Contains the last acr_value sent by the client.
         #See op_confy.py. Can be the ACR value string in the dictionary AUTHORIZATION.
         self.auth = None
+
 
 #This class represents an OP and is written for a WSGI application.
 #If configured togheter with pyOpSamlProxy.client.sp.handler this OP can act as a proxy against an IdP.
@@ -133,11 +136,11 @@ class OpHandler:
 
         #Setup the provider. (oic.oic.provider.Provider)
         self.provider = self.setup_provider(logger, mako_lookup, self.authorization_url, config, self.endpoints,
-                                                sphandler, self.seed,
-                                                test, debug)
+                                            sphandler, self.seed,
+                                            test, debug)
 
     def setup_provider(self, logger, mako_lookup, authorization_url, config, endpoints, sphandler, seed,
-                      test=False, debug=False):
+                       test=False, debug=False):
         """
         Initializes a pyoidc provider. (oic.oic.provider.Provider)
         :param sphandler: An instance of the class pyOpSamlProxy.client.sp.handler.SpHandler.
@@ -155,20 +158,21 @@ class OpHandler:
         """
         cdb = shelve.open("client_db", writeback=True)
 
-        ac = self.setup_authorization(config.AUTHORIZATION,
-                                      config.AUTHORIZATIONPAGE_PASSWORD,
-                                      config.AUTHORIZATIONPAGE_YUBIKEY,
-                                      config.AUTHORIZATIONPAGE_PASSWORD_YUBIKEY,
-                                      mako_lookup,
-                                      authorization_url,
-                                      config.PASSWD,
-                                      config.CAS_SERVER,
-                                      config.LDAP,
-                                      config.LDAP_EXTRAVALIDATION,
-                                      config.CAS_SERVICE_URL,
-                                      sphandler,
-                                      config.YUBIKEY_SERVER,
-                                      config.YUBIKEY_DB
+        ac = self.setup_authorization(
+            config.AUTHORIZATION,
+            config.AUTHORIZATIONPAGE_PASSWORD,
+            config.AUTHORIZATIONPAGE_YUBIKEY,
+            config.AUTHORIZATIONPAGE_PASSWORD_YUBIKEY,
+            mako_lookup,
+            authorization_url,
+            config.PASSWD,
+            config.CAS_SERVER,
+            config.LDAP,
+            config.LDAP_EXTRAVALIDATION,
+            config.CAS_SERVICE_URL,
+            sphandler,
+            config.YUBIKEY_SERVER,
+            config.YUBIKEY_DB
         )
         authz = AuthzHandling()
 
@@ -190,7 +194,7 @@ class OpHandler:
         provider = self.setup_provider_url(provider, config.BASEURL, config.PORT)
         provider = self.setup_provider_keys(provider, logger, config.OP_PRIVATE_KEYS, config.OP_PUBLIC_KEYS)
         provider = self.setup_provider_userinfo(provider, config.AUTHORIZATION,
-                                                   config.USERINFO, config.LDAP, config.USERDB, sphandler)
+                                                config.USERINFO, config.LDAP, config.USERDB, sphandler)
         return provider
 
     def setup_provider_userinfo(self, provider, authorization, userinfo, ldap, userdb, sphandler):
@@ -316,27 +320,28 @@ class OpHandler:
             return sphandler.userinfo
         elif userinfo == OpHandler.USER_INFO_LDAP:
             from oic.utils.userinfo.ldap_info import UserInfoLDAP
+
             return UserInfoLDAP(**ldap)
         elif userinfo == OpHandler.USER_INFO_SIMPLE:
             return UserInfo(userdb)
 
-
-    def setup_authorization(self,
-                            authorization,
-                            authorization_page_password,
-                            authorization_page_yubikey,
-                            authorization_page_password_yubikey,
-                            mako_lookup,
-                            authorization_url,
-                            passwd,
-                            cas_server,
-                            ldap_config,
-                            ldap_extra_config,
-                            cas_service_url,
-                            sphandler,
-                            yubikey_server,
-                            yubikey_db
-                            ):
+    def setup_authorization(
+        self,
+        authorization,
+        authorization_page_password,
+        authorization_page_yubikey,
+        authorization_page_password_yubikey,
+        mako_lookup,
+        authorization_url,
+        passwd,
+        cas_server,
+        ldap_config,
+        ldap_extra_config,
+        cas_service_url,
+        sphandler,
+        yubikey_server,
+        yubikey_db
+    ):
         """
         Creates an instance of the class oic.utils.authn.authn_context.AuthnBroker that should handle the authentication
         for the provider (oic.oic.provider.Provider).
@@ -386,19 +391,20 @@ class OpHandler:
 
                 authn_config_list = value[OpHandler.AUTHENTICATION_AUTHNLIST]
                 for element in authn_config_list:
-                    tmpauthn = self.get_authn(element[OpHandler.AUTHORIZATION_ACR],
-                                              ldap_config, cas_server,
-                                              cas_service_url,
-                                              authorization_url,
-                                              ldap_extra_config,
-                                              authorization_page_password,
-                                              authorization_page_yubikey,
-                                              authorization_page_password_yubikey,
-                                              mako_lookup,
-                                              passwd,
-                                              sphandler,
-                                              yubikey_server,
-                                              yubikey_db
+                    tmpauthn = self.get_authn(
+                        element[OpHandler.AUTHORIZATION_ACR],
+                        ldap_config, cas_server,
+                        cas_service_url,
+                        authorization_url,
+                        ldap_extra_config,
+                        authorization_page_password,
+                        authorization_page_yubikey,
+                        authorization_page_password_yubikey,
+                        mako_lookup,
+                        passwd,
+                        sphandler,
+                        yubikey_server,
+                        yubikey_db
                     )
                     authn_list.append(tmpauthn)
                 authn = MultipleAuthHandler(authn_list)
@@ -483,13 +489,10 @@ class OpHandler:
         :param yubikey_server URL to the yubikey validation server.
         :return: The object instance that should handle authorization.
         """
-
-
-                  #authorization_page_yubikey,
-                  #authorization_page_password_yubikey,
-                  #yubikey_server,
-                  #yubikey_db
-
+        #authorization_page_yubikey,
+        #authorization_page_password_yubikey,
+        #yubikey_server,
+        #yubikey_db
         if OpHandler.AUTHORIZATION_SAML == authkey:
             authn = sphandler.authnmethod
         elif OpHandler.AUTHORIZATION_CAS == authkey:
@@ -616,7 +619,7 @@ class OpHandler:
         This method must be called before the provider (oic.oic.provider.Provider) calls this class.
         :param environ: WSGI enviroment.
         """
-        areq =  urlparse.parse_qs(environ.get("QUERY_STRING", ""))
+        areq = urlparse.parse_qs(environ.get("QUERY_STRING", ""))
         authn = self.pick_auth(areq)
         if type(authn) is MultipleAuthHandler:
             authn.ophandler = self
@@ -628,7 +631,7 @@ class OpHandler:
         :param environ: WSGI enviroment.
         :return: The user identification.
         """
-        areq =  urlparse.parse_qs(environ.get("QUERY_STRING", ""))
+        areq = urlparse.parse_qs(environ.get("QUERY_STRING", ""))
         uid = self.get_sub_from_accesstoken(environ)
         if uid is not None:
             return uid
@@ -706,7 +709,7 @@ class OpHandler:
             name = cookie_split[0]
             value = cookie_split[1]
             if name != cookie_name:
-                if cookie_string == None:
+                if cookie_string is None:
                     cookie_string = name + "=" + value
                 else:
                     cookie_string += ";" + name + "=" + value
@@ -719,7 +722,7 @@ class OpHandler:
         :param environ: WSGI enviroment.
         """
         if OpHandler.CLEARSESSION in session and self.session_cache[session[OpHandler.CLEARSESSION]] is not None and \
-                        self.session_cache[session[OpHandler.CLEARSESSION]] is not True:
+           self.session_cache[session[OpHandler.CLEARSESSION]] is not True:
             self.clear_user_data(environ, session)
         if OpHandler.CLEARSESSION not in session or session[OpHandler.CLEARSESSION] is None:
             session[OpHandler.CLEARSESSION] = uuid.uuid4().urn
@@ -749,7 +752,6 @@ class OpHandler:
             self.provider.userinfo.set_saml_response(samlresponse)
         elif userinfo_type is UserInfoSpHandler:
             self.provider.userinfo.samlresponse = samlresponse
-
 
     def verify_provider_requests(self, path):
         """
@@ -794,7 +796,7 @@ class OpHandler:
                     resp = http_util.ServiceError("%s" % err)
                     return resp
 
-#Below is methods that catches client requests.
+                    #Below is methods that catches client requests.
 
     def webfinger(self, environ, start_response):
         """
@@ -836,7 +838,7 @@ class OpHandler:
         return resp(environ, start_response)
 
     def verify_client_id(self, environ, start_response):
-        areq =  urlparse.parse_qs(environ.get("QUERY_STRING", ""))
+        areq = urlparse.parse_qs(environ.get("QUERY_STRING", ""))
         try:
             client = self.provider.cdb[areq["client_id"][0]]
             return http_util.Response()(environ, start_response)
@@ -1098,7 +1100,7 @@ class OpHandler:
         #If the attribute data is not valid the RP must perform a new login.
         self.set_saml_response(False)
         resp = self.sphandler.userinfo.verify_information(environ, self.session)
-        if resp == True:
+        if resp:
             return wsgi_wrapper(environ, start_response, self.provider.userinfo_endpoint,
                                 logger=self.logger)
         else:
@@ -1116,7 +1118,7 @@ class OpHandler:
         """
         self.set_saml_response(True)
         resp = self.sphandler.userinfo.verify_information(environ, self.session)
-        if resp == True:
+        if resp:
             return wsgi_wrapper(environ, start_response, self.provider.userinfo_endpoint,
                                 logger=self.logger)
         else:
@@ -1142,7 +1144,7 @@ class OpHandler:
         :param start_response: WSGI start response.
         :return:
         """
-        resp =  wsgi_wrapper(environ, start_response, self.provider.end_session_endpoint, logger=self.logger)
+        resp = wsgi_wrapper(environ, start_response, self.provider.end_session_endpoint, logger=self.logger)
         if self.provider.is_session_revoked(environ["QUERY_STRING"], environ["HTTP_COOKIE"]):
             self.clear_user_data(environ, self.session)
         return resp

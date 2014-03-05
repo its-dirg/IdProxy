@@ -11,8 +11,10 @@ from idproxy.provider.idp.auth.util import IdPAuthentication
 
 logger = logging.getLogger("pyOpSamlProxy.provider.idp.auth.sp")
 
+
 class SpAuthentication(IdPAuthentication):
     SPAUTHENTICATIONCOOKIE = "SPAUTHENTICATIONCOOKIE"
+
     def __init__(self, idphandler, sphandler):
         IdPAuthentication.__init__(self, idphandler)
         self.sphandler = sphandler
@@ -71,7 +73,6 @@ class SpAuthentication(IdPAuthentication):
         if sp_handler_cache is None or not sp_handler_cache.auth or sp_handler_cache.uid is None:
             return False
         return True
-
 
     def verify(self, environ, start_response):
         _ok = self.verify_bool(environ, start_response)
