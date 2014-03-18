@@ -127,7 +127,7 @@ USERS = {
     },
 }
 EXTRA = {
-    "roland": {
+    "test1": {
         "eduPersonEntitlement": "urn:mace:swamid.se:foo:bar",
         "schacGender": "male",
         "schacUserPresenceID": "skype:test.test"
@@ -205,11 +205,11 @@ CONFIG = {
         },
     },
     "debug": 1,
-    "key_file":  WORKING_DIR+"idp_cert/localhost.key",  #Here you should point out your private key for the certificate.
-    "cert_file":  WORKING_DIR+"idp_cert/localhost.crt",  #Here you should point out your certificate.
-    "metadata": {
-        "local": ["[..]/sp.xml"],
-    },
+    #Here you should point out your private key for the certificate.
+    "key_file":  WORKING_DIR+"idp_cert/localhost.key",
+    #Here you should point out your certificate.
+    "cert_file":  WORKING_DIR+"idp_cert/localhost.crt",
+    "metadata": {"local": ["[..]/sp.xml"],},
     "organization": {
         "display_name": "Test organisation",
         "name": "Test organisation",

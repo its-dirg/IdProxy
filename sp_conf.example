@@ -114,9 +114,15 @@ CONFIG = {
     "entityid": "%s/%ssp.xml" % (BASE, ""),
     "description": "IdProxy SP",
     "entity_category": [COC, RESEARCH_AND_EDUCATION, HEI, SFS_1993_1153, NREN, EU],
+    #CERT_GENERATION
+    #"validate_certificate": True,
     "service": {
         "sp": {
             "name": "Test proxy SP",
+            #Will sign the request!
+            #"authn_requests_signed": "true",
+            #Demands that the assertion is signed.
+            #"want_assertions_signed": "true",
             "endpoints": {
                 "assertion_consumer_service": [
                     (BASE + "/" + ASCREDIRECT, BINDING_HTTP_REDIRECT),

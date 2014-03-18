@@ -1,3 +1,5 @@
+from saml2.sigver import encrypt_cert_from_item
+
 __author__ = 'haho0032'
 from urlparse import parse_qs
 
@@ -63,12 +65,17 @@ class Service(object):
                 _relay_state = _dict["RelayState"]
             except KeyError:
                 _relay_state = ""
+            _encrypt_cert =  None
+            try:
+                _encrypt_cert = encrypt_cert_from_item(_dict["req_info"].message)
+            except:
+                pass
             if "SAMLResponse" in _dict:
                 return self.do(_dict["SAMLResponse"], binding,
-                               _relay_state, mtype="response")
+                               _relay_state, mtype="response", encrypt_cert=_encrypt_cert)
             elif "SAMLRequest" in _dict:
                 return self.do(_dict["SAMLRequest"], binding,
-                               _relay_state, mtype="request")
+                               _relay_state, mtype="request", encrypt_cert=_encrypt_cert)
 
     def artifact_operation(self, _dict):
         if not _dict:
@@ -86,7 +93,7 @@ class Service(object):
             resp = Response(http_args["data"], headers=http_args["headers"])
         return resp(self.environ, self.start_response)
 
-    def do(self, query, binding, relay_state="", mtype="response"):
+    def do(self, query, binding, relay_state="", mtype="response", encrypt_cert=None):
         pass
 
     def redirect(self):

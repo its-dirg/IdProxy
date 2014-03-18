@@ -30,14 +30,23 @@ class SpAuthentication(IdPAuthentication):
             return self.sphandler.certificate_from_cache(cookie_dict["sid"])
         return None
 
+    def sp_encrypt_certificate(self, environ):
+        cookie_dict = self.sp_auth_cookie(environ)
+        if "encrypt_sid" in cookie_dict and cookie_dict["encrypt_sid"] is not None and len(cookie_dict["encrypt_sid"]) > 0:
+            return self.sphandler.certificate_from_cache(cookie_dict["encrypt_sid"])
+        return None
+
     def authn_redirect(self, environ):
         cookie_dict = self.sp_auth_cookie(environ)
         return Redirect(cookie_dict["query"])
 
     def authenticate(self, environ, start_response, reference, key, redirect_uri, **kwargs):
         _sid = ""
-        if "certificate_str" in kwargs:
+        _encrypt_sid = ""
+        if "certificate_str" in kwargs and kwargs["certificate_str"] is not None:
             _sid = self.sphandler.add_certificate_to_cache(kwargs["certificate_str"])
+        if "certificate_key_str" in kwargs and kwargs["certificate_key_str"] is not None:
+            _encrypt_sid = self.sphandler.add_certificate_to_cache(kwargs["certificate_key_str"])
 
         query_dict = {
             "key": key,
@@ -52,6 +61,7 @@ class SpAuthentication(IdPAuthentication):
         cookie_load = {
             "query": query,
             "sid": _sid,
+            "encrypt_sid": _encrypt_sid
         }
 
         cookie_load = self.encrypt_dict(cookie_load)
@@ -92,17 +102,11 @@ class SpAuthentication(IdPAuthentication):
         sp_handler_cache = self.sphandler.get_sp_handler_cache(user)
         return sp_handler_cache.attributes
 
-    def assertion(self, environ, start_response, uid):
+    def sp_handler_cache(self, environ, start_response, uid):
         session = Session(environ)
         user = session[SpHandler.SPHANDLERFORUID]
         sp_handler_cache = self.sphandler.get_sp_handler_cache(user)
-        return sp_handler_cache.assertion
-
-    def encrypted_assertion(self, environ, start_response, uid):
-        session = Session(environ)
-        user = session[SpHandler.SPHANDLERFORUID]
-        sp_handler_cache = self.sphandler.get_sp_handler_cache(user)
-        return sp_handler_cache.encrypted_assertion
+        return sp_handler_cache\
 
     def extra(self, environ, start_response, uid):
         return {}

@@ -19,7 +19,8 @@ from saml2.s_utils import exception_trace
 from saml2.s_utils import UnknownPrincipal
 from saml2.s_utils import UnsupportedBinding
 from saml2.s_utils import PolicyError
-from saml2.sigver import verify_redirect_signature
+from saml2.sigver import verify_redirect_signature, encrypt_cert_from_item, pre_encrypt_assertion, \
+    CryptoBackendXMLSecurity
 
 from idproxy.util.saml import Service
 
@@ -110,7 +111,7 @@ class SSO(Service):
         return resp_args, _resp
 
     # noinspection PyMethodOverriding
-    def not_authn(self, key, requested_authn_context, cert_str=None):
+    def not_authn(self, key, requested_authn_context, cert_str=None, cert_key_str=None):
         redirect_uri = geturl(self.environ, query=False)
         self.logger.debug("Do authentication")
         auth_info = self.idphandler.authn_broker.pick(requested_authn_context)
@@ -118,12 +119,12 @@ class SSO(Service):
             method, reference = auth_info[0]
             logger.debug("Authn chosen: %s (ref=%s)" % (method, reference))
             return method.authenticate(self.environ, self.start_response, reference, key, redirect_uri,
-                                       certificate_str=cert_str)
+                                       certificate_str=cert_str, certificate_key_str=cert_key_str)
         else:
             resp = Unauthorized("No usable authentication method")
             return resp(self.environ, self.start_response)
 
-    def do(self, query, binding_in, relay_state="", mtype=None):
+    def do(self, query, binding_in, relay_state="", mtype=None, encrypt_cert=None):
         try:
             resp_args, _resp = self.verify_request(query, binding_in)
         except UnknownPrincipal, excp:
@@ -135,8 +136,6 @@ class SSO(Service):
             resp = ServiceError("UnsupportedBinding: %s" % (excp,))
             return resp(self.environ, self.start_response)
 
-        assertion = None
-        encrypted_assertion = None
         if not _resp:
             identity = {}
 
@@ -144,16 +143,29 @@ class SSO(Service):
             method = None
             override_sign_assertion = None
             override_encrypt_assertion = None
+            override_sign_response = None
+            assertion = None
+            encrypted_assertion = None
+            authnresponse = None
+            namespace_list = None
             if authn:
                 method = authn["method"]
             if method:
                 identity = method.information(self.environ, self.start_response, self.user)
                 try:
-                    assertion = method.assertion(self.environ, self.start_response, self.user)
-                    encrypted_assertion = method.encrypted_assertion(self.environ, self.start_response, self.user)
-                    override_sign_assertion = True
+                    sp_handler_cache = method.sp_handler_cache(self.environ, self.start_response, self.user)
+                    assertion = sp_handler_cache.assertion
+                    encrypted_assertion = sp_handler_cache.encrypted_assertion
+                    authnresponse = sp_handler_cache.authnresponse
+                    namespace_list = sp_handler_cache.namespace_dict
+                    if assertion is not None:
+                        override_sign_assertion = True
+                        override_sign_response = False
+                        override_encrypt_assertion = False
                     if encrypted_assertion is not None:
-                        override_encrypt_assertion = True
+                        override_encrypt_assertion = False
+                        override_sign_assertion = False
+                        override_sign_response = False
                 except Exception:
                     pass
 
@@ -163,35 +175,50 @@ class SSO(Service):
                 identity[self.REPOZE_ID_EQUIVALENT] = self.user
             try:
                 sign_assertion = self.idphandler.idp_server.config.getattr("sign_assertion", "idp")
+                sign_response = self.idphandler.idp_server.config.getattr("sign_response", "idp")
+                encrypt_assertion = self.idphandler.idp_server.config.getattr("sign_response", "idp")
                 if sign_assertion is None:
                     sign_assertion = False
                 if override_sign_assertion is not None:
                     sign_assertion = override_sign_assertion
+                if override_sign_response is not None:
+                    sign_response = override_sign_response
+                if override_encrypt_assertion is not None:
+                    encrypt_assertion = override_encrypt_assertion
+                    if not encrypt_assertion:
+                        encrypt_cert = None
                 _resp = self.idphandler.idp_server.create_authn_response(
                     identity, userid=self.user,
                     authn=self.idphandler.authn_broker[self.idphandler.auth_cookie.authn_ref],
                     sign_assertion=sign_assertion,
-                    sign_response=False,
+                    sign_response=sign_response,
+                    encrypt_cert=encrypt_cert,
+                    encrypt_assertion=encrypt_assertion,
                     **resp_args)
+                if assertion is not None or encrypted_assertion is not None:
+                    split_name = "Assertion"
+                    if encrypted_assertion is not None:
+                        split_name = "EncryptedAssertion"
+                        assertion = encrypted_assertion
+                    _resp.c_ns_prefix = namespace_list
+                    xml_str = _resp.to_string()
+                    xml_str_list = xml_str.split("Assertion")
+
+                    start_index = (xml_str_list[0][::-1].find("<")) * -1
+                    _resp = xml_str_list[0][:(start_index - 1)] + assertion + xml_str_list[2][1:]
+                    name1 = assertion[assertion.find('<') + 1:assertion.find(':')]
+                    name2 = xml_str_list[0][len(xml_str_list[0]) + start_index:-1]
+                    _resp.replace(name2, name1)
+                    if self.idphandler.idp_server.config.getattr("sign_response", "idp"):
+                        _resp = CryptoBackendXMLSecurity().sign_statement(_resp,
+                                                                          None,
+                                                                          self.idphandler.idp_server.config.key_file,
+                                                                          None,
+                                                                          None)
             except Exception, excp:
                 logging.error(exception_trace(excp))
                 resp = ServiceError("Exception: %s" % (excp,))
                 return resp(self.environ, self.start_response)
-
-        if assertion is not None or encrypted_assertion is not None:
-            split_name = "Assertion"
-            if encrypted_assertion is not None:
-                split_name = "EncryptedAssertion"
-                assertion = encrypted_assertion
-
-            xml_str = str(_resp)
-            xml_str_list = xml_str.split(split_name)
-
-            start_index = (xml_str_list[0][::-1].find("<")) * -1
-            _resp = xml_str_list[0][:(start_index - 1)] + assertion + xml_str_list[2][1:]
-            name1 = assertion[assertion.find('<') + 1:assertion.find(':')]
-            name2 = xml_str_list[0][len(xml_str_list[0]) + start_index:-1]
-            _resp.replace(name2, name1)
 
         logger.info("AuthNResponse: %s" % _resp)
         http_args = self.idphandler.idp_server.apply_binding(self.binding_out,
@@ -240,17 +267,21 @@ class SSO(Service):
                     resp = BadRequest("Message signature verification failure")
                     return resp(self.environ, self.start_response)
 
+            _encrypt_cert = None
+            if self.idphandler.copy_sp_key:
+                _encrypt_cert = encrypt_cert_from_item(self.req_info.message)
+
             if self.user:
                 if _req.force_authn:
                     _info["req_info"] = self.req_info
                     key = self._store_request(_info)
-                    return self.not_authn(key, _req.requested_authn_context, cert_str)
+                    return self.not_authn(key, _req.requested_authn_context, cert_str, _encrypt_cert)
                 else:
                     return self.operation(_info, BINDING_HTTP_REDIRECT)
             else:
                 _info["req_info"] = self.req_info
                 key = self._store_request(_info)
-                return self.not_authn(key, _req.requested_authn_context, cert_str)
+                return self.not_authn(key, _req.requested_authn_context, cert_str, _encrypt_cert)
         else:
             return self.operation(_info, BINDING_HTTP_REDIRECT)
 
@@ -270,17 +301,22 @@ class SSO(Service):
             self.req_info = self.idphandler.idp_server.parse_authn_request(_info["SAMLRequest"],
                                                                            BINDING_HTTP_POST)
         _req = self.req_info.message
+
+        _encrypt_cert = None
+        if self.idphandler.copy_sp_key:
+            _encrypt_cert = encrypt_cert_from_item(_info["req_info"].message)
+
         if self.user:
             if _req.force_authn:
                 _info["req_info"] = self.req_info
                 key = self._store_request(_info)
-                return self.not_authn(key, _req.requested_authn_context, cert_str)
+                return self.not_authn(key, _req.requested_authn_context, cert_str, _encrypt_cert)
             else:
                 return self.operation(_info, BINDING_HTTP_POST)
         else:
             _info["req_info"] = self.req_info
             key = self._store_request(_info)
-            return self.not_authn(key, _req.requested_authn_context, cert_str)
+            return self.not_authn(key, _req.requested_authn_context, cert_str, _encrypt_cert)
 
     def ecp(self):
         # The ECP interface
@@ -324,7 +360,7 @@ class SLO(Service):
         Service.__init__(self, environ, start_response, logger, user)
         self.idphandler = idphandler
 
-    def do(self, request, binding, relay_state="", mtype=None):
+    def do(self, request, binding, relay_state="", mtype=None, encrypt_cert=None):
         logger.info("--- Single Log Out Service ---")
         try:
             _, body = request.split("\n")
@@ -377,7 +413,7 @@ class AIDR(Service):
         Service.__init__(self, environ, start_response, logger, user)
         self.idphandler = idphandler
 
-    def do(self, aid, binding, relay_state="", mtype=None):
+    def do(self, aid, binding, relay_state="", mtype=None, encrypt_cert=None):
         logger.info("--- Assertion ID Service ---")
 
         try:
@@ -410,7 +446,7 @@ class ARS(Service):
         Service.__init__(self, environ, start_response, logger, user)
         self.idphandler = idphandler
 
-    def do(self, request, binding, relay_state="", mtype=None):
+    def do(self, request, binding, relay_state="", mtype=None, encrypt_cert=None):
         _req = self.idphandler.idp_server.parse_artifact_resolve(request, binding)
 
         msg = self.idphandler.idp_server.create_artifact_response(_req, _req.artifact.text)
@@ -431,7 +467,7 @@ class NMI(Service):
         Service.__init__(self, environ, start_response, logger, user)
         self.idphandler = idphandler
 
-    def do(self, query, binding, relay_state="", mtype=None):
+    def do(self, query, binding, relay_state="", mtype=None, encrypt_cert=None):
         logger.info("--- Manage Name ID Service ---")
         req = self.idphandler.idp_server.parse_manage_name_id_request(query, binding)
         request = req.message
@@ -466,7 +502,7 @@ class NIM(Service):
         Service.__init__(self, environ, start_response, logger, user)
         self.idphandler = idphandler
 
-    def do(self, query, binding, relay_state="", mtype=None):
+    def do(self, query, binding, relay_state="", mtype=None, encrypt_cert=None):
         req = self.idphandler.idp_server.parse_name_id_mapping_request(query, binding)
         request = req.message
         # Do the necessary stuff
@@ -501,7 +537,7 @@ class AQS(Service):
         Service.__init__(self, environ, start_response, logger, user)
         self.idphandler = idphandler
 
-    def do(self, request, binding, relay_state="", mtype=None):
+    def do(self, request, binding, relay_state="", mtype=None, encrypt_cert=None):
         logger.info("--- Authn Query Service ---")
         _req = self.idphandler.idp_server.parse_authn_query(request, binding)
         _query = _req.message
@@ -528,7 +564,7 @@ class ATTR(Service):
         Service.__init__(self, environ, start_response, logger, user)
         self.idphandler = idphandler
 
-    def do(self, request, binding, relay_state="", mtype=None):
+    def do(self, request, binding, relay_state="", mtype=None, encrypt_cert=None):
         logger.info("--- Attribute Query Service ---")
 
         _req = self.idphandler.idp_server.parse_attribute_query(request, binding)

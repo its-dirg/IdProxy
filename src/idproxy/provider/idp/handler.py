@@ -116,6 +116,7 @@ class IdPHandler:
     def __init__(self, args, template_lookup, sphandler):
         idpconfig = importlib.import_module(args.idpconfig)
         self.copy_sp_cert = idpconfig.COPYSPCERT
+        self.copy_sp_key = idpconfig.COPYSPKEY
         self.passwd = idpconfig.PASSWD
         self.user_info = idpconfig.USERS
         self.extra_info = idpconfig.EXTRA

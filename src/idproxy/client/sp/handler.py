@@ -44,6 +44,10 @@ class SpHandlerCache(object):
         self.assertion = None
         #The complete encrypted assertion
         self.encrypted_assertion = None
+        #Complete authn response
+        self.authnresponse = None
+        #Namespaces in the response as a dictionary.
+        self.namespace_dict = None
 
 
 #SPHandler represent a SP client and acts separate on the application server.
@@ -297,7 +301,8 @@ class SpHandler:
             else:
                 session[self.SPHANDLERVERIFYTYPE] = "IDP"
             _sso = SSO(self.sp, environ, start_response, self.logger, session[self.SPHANDLERSSOCACHE], **self.args)
-            return _sso.do(self.sp_authentication.sp_certificate(environ))
+            return _sso.do(self.sp_authentication.sp_certificate(environ),
+                           self.sp_authentication.sp_encrypt_certificate(environ))
         for regex in self.sp_conf.ASCVERIFYPOSTLIST:
             match = re.search(regex, path)
             if match is not None:
@@ -327,8 +332,18 @@ class SpHandler:
                                 saml_response = saml_response[0]
                             xmlstr = self.sp.unravel(saml_response, BINDING_HTTP_POST, AuthnResponse.msgtype)
 
+                            namespace_dict = {}
+                            str_split = xmlstr.split(" ")
+                            for item in str_split:
+                                if item.find("xmlns:") >= 0:
+                                    try:
+                                        tmp_namespace = item.split("=")
+                                        namespace_dict[tmp_namespace[0].split(":")[1]] = tmp_namespace[1]
+                                    except Exception:
+                                        pass
+
                             split_name = "EncryptedAssertion"
-                            if saml_response.find(split_name) < 0:
+                            if xmlstr.find(split_name) < 0:
                                 split_name = "Assertion"
                             xmlstr_list = xmlstr.split(split_name)
 
@@ -361,6 +376,9 @@ class SpHandler:
                             }
                             sp_handler_cache.assertion = str_assertion
                             sp_handler_cache.encrypted_assertion = str_encrypted_assertion
+                            sp_handler_cache.authnresponse = xmlstr
+                            sp_handler_cache.namespace_dict = namespace_dict
+
                             sp_handler_cache.auth = True
                             self.set_sp_handler_cache(uid, sp_handler_cache)
 

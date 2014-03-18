@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 import saml2
+from saml2.extension.pefim import SPCertEnc
+from saml2.md import Extensions
 
-__author__ = 'haho0032'
+import xmldsig as ds
 from idproxy.util.saml import Service
 from urlparse import parse_qs
-from saml2 import BINDING_HTTP_REDIRECT
+from saml2 import BINDING_HTTP_REDIRECT, element_to_extension_element
 from saml2 import ecp
 from saml2 import BINDING_HTTP_ARTIFACT
 from saml2 import BINDING_HTTP_POST
@@ -186,17 +188,23 @@ class SSO(object):
         self.logger.info("Chosen IdP: '%s'" % idp_entity_id)
         return 0, idp_entity_id
 
-    def _redirect_to_auth(self, _cli, entity_id, came_from, vorg_name="", cert_str=None):
+    def _redirect_to_auth(self, _cli, entity_id, came_from, vorg_name="", cert_str=None, cert_key_str=None):
         try:
             _binding, destination = _cli.pick_binding(
                 "single_sign_on_service", self.bindings, "idpsso",
                 entity_id=entity_id)
             self.logger.debug("binding: %s, destination: %s" % (_binding,
                                                                 destination))
+
+            extensions = None
+            if cert_key_str is not None:
+                spcertenc = SPCertEnc(x509_data=ds.X509Data(x509_certificate=ds.X509Certificate(text=cert_key_str)))
+                extensions = Extensions(extension_elements=[element_to_extension_element(spcertenc)])
+
             if _cli.authn_requests_signed:
                 _sid = saml2.s_utils.sid(_cli.seed)
                 msg_str = _cli.create_authn_request(destination, vorg=vorg_name, sign=_cli.authn_requests_signed,
-                                                    message_id=_sid, client_crt=cert_str)
+                                                    message_id=_sid, client_crt=cert_str, extensions=extensions)
             else:
                 req = _cli.create_authn_request(destination, vorg=vorg_name, sign=False)
                 msg_str = "%s" % req
@@ -218,7 +226,7 @@ class SSO(object):
         self.cache.outstanding_queries[_sid] = came_from
         return self.response(_binding, ht_args, do_not_start_response=True)
 
-    def do(self, cert_str=None):
+    def do(self, cert_str=None, cert_key_str=None):
         _cli = self.sp
 
         # Which page was accessed to get here
@@ -247,7 +255,7 @@ class SSO(object):
         else:
             entity_id = response
             # Do the AuthnRequest
-            resp = self._redirect_to_auth(_cli, entity_id, came_from, vorg_name, cert_str)
+            resp = self._redirect_to_auth(_cli, entity_id, came_from, vorg_name, cert_str, cert_key_str)
             return resp(self.environ, self.start_response)
 
 

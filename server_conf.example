@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 #Port for the webserver.
-PORT=8999
+PORT = 8999
 #True if HTTPS should be used, false is equal to HTTP.
-HTTPS=True
+HTTPS = True
 
 #Server hostname
 HOST="localhost"
