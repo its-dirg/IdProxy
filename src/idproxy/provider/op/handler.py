@@ -1,3 +1,5 @@
+from idproxy import ServiceErrorException
+
 __author__ = 'haho0032'
 import urlparse
 import uuid
@@ -793,8 +795,7 @@ class OpHandler:
                     message = traceback.format_exception(*sys.exc_info())
                     print >> sys.stderr, message
                     self.logger.exception("%s" % err)
-                    resp = http_util.ServiceError("%s" % err)
-                    return resp
+                    raise err
 
                     #Below is methods that catches client requests.
 
@@ -940,8 +941,7 @@ class OpHandler:
             return wsgi_wrapper(environ, start_response, self.provider.read_registration,
                                 logger=self.logger)
         else:
-            resp = http_util.ServiceError("Method not supported")
-            return resp(environ, start_response)
+            return ServiceErrorException("Method not supported")
 
     def authorization(self, environ, start_response):
         """

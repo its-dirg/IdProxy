@@ -1,3 +1,4 @@
+from uuid import uuid4
 from idproxy.client.sp.handler import SpHandler
 from idproxy.provider.idp.handler import IdPHandler
 import server_conf
@@ -5,7 +6,7 @@ import server_conf
 __author__ = 'haho0032'
 #Imports within the project
 from dirg_util.log import create_logger
-from dirg_util.http_util import HttpHandler
+from dirg_util.http_util import HttpHandler, BadRequest
 from dirg_util.session import Session
 from idproxy.provider.op.handler import OpHandler
 #Imports within DIG
@@ -17,6 +18,7 @@ from cherrypy import wsgiserver
 from cherrypy.wsgiserver import ssl_pyopenssl
 from beaker.middleware import SessionMiddleware
 from mako.lookup import TemplateLookup
+from saml2.s_utils import exception_trace
 
 #Lookup for all mako templates.
 LOOKUP = TemplateLookup(directories=['mako/templates', "/opt/dirg/dirg-util/mako/templates", 'mako/htdocs'],
@@ -32,29 +34,38 @@ def application(environ, start_response):
     :param start_response: WSGI start response.
     :return: Depends on the request. Always a WSGI response where start_response first have to be initialized.
     """
-    session = Session(environ)
+    try:
+        session = Session(environ)
 
-    http_helper = HttpHandler(environ, start_response, session, logger)
-    path = http_helper.path()
+        http_helper = HttpHandler(environ, start_response, session, logger)
+        path = http_helper.path()
 
-    environ = sphandler.verify_sp_user_validity(session, environ, path)
-    http_helper.log_request()
-    response = None
-    if ophandler.verify_provider_requests(path):
-        response = ophandler.handle_provider_requests(environ, start_response, path, session)
-    if idphandler.verify_provider_requests(path, environ):
-        response = idphandler.handle_provider_requests(environ, start_response, path)
-    elif sphandler.verify_sp_requests(path):
-        response = sphandler.handle_sp_requests(environ, start_response, path, session)
-    elif http_helper.verify_static(path):
-        return http_helper.handle_static(path)
+        environ = sphandler.verify_sp_user_validity(session, environ, path)
+        http_helper.log_request()
+        response = None
+        if ophandler.verify_provider_requests(path):
+            response = ophandler.handle_provider_requests(environ, start_response, path, session)
+        if idphandler.verify_provider_requests(path, environ):
+            response = idphandler.handle_provider_requests(environ, start_response, path)
+        elif sphandler.verify_sp_requests(path):
+            response = sphandler.handle_sp_requests(environ, start_response, path, session)
+        elif http_helper.verify_static(path):
+            return http_helper.handle_static(path)
 
-    if response is None:
-        response = http_helper.http404()
+        if response is None:
+            response = http_helper.http404()
 
-    http_helper.log_response(response)
-    return response
-
+        http_helper.log_response(response)
+        return response
+    except Exception, excp:
+        urn = uuid4().urn
+        logger.error("uuid: " + str(urn) + str(exception_trace(excp)))
+        argv = {
+            "log_id": str(urn),
+        }
+        mte = LOOKUP.get_template("bad_request.mako")
+        resp = BadRequest(mte.render(**argv))
+        return resp(environ, start_response)
 
 if __name__ == '__main__':
     #This is equal to a main function in other languages. Handles all setup and starts the server.
@@ -93,7 +104,7 @@ if __name__ == '__main__':
         test = True
 
     global logger
-    logger = create_logger(config.LOG_FILE)
+    logger = create_logger(server_conf.LOG_FILE)
 
     global sphandler
     sphandler = SpHandler(logger, args)

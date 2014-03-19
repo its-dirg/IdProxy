@@ -220,9 +220,12 @@ class SpHandler:
                                                                          datetime.timedelta(minutes=
                                                                                             self.sp_conf.CERT_TIMEOUT)
         elif self.sphandlercache[self.certificate_cache_name + "clear"] < datetime.datetime.now():
+            del_key_list = []
             for key, value in self.sphandlercache[self.certificate_cache_name].iteritems():
                 if not (value["timeout"] > datetime.datetime.now()):
-                    del self.sphandlercache[self.certificate_cache_name][key]
+                    del_key_list.append(key)
+            for key in del_key_list:
+                del self.sphandlercache[self.certificate_cache_name][key]
         return self.sphandlercache[self.certificate_cache_name]
 
     def add_certificate_to_cache(self, certificate_str):
@@ -318,6 +321,7 @@ class SpHandler:
                                 "outstanding_queries": session[self.SPHANDLERSSOCACHE].outstanding_queries,
                                 "allow_unsolicited": self.sp.allow_unsolicited,
                                 "want_assertions_signed": False,
+                                "want_response_signed": self.sp.want_response_signed,
                                 "return_addrs": self.sp.service_urls(),
                                 "entity_id": self.sp.config.entityid,
                                 "attribute_converters": self.sp.config.attribute_converters,
@@ -332,15 +336,23 @@ class SpHandler:
                                 saml_response = saml_response[0]
                             xmlstr = self.sp.unravel(saml_response, BINDING_HTTP_POST, AuthnResponse.msgtype)
 
+                            authn_response.loads(xmlstr, False)
+
                             namespace_dict = {}
-                            str_split = xmlstr.split(" ")
-                            for item in str_split:
-                                if item.find("xmlns:") >= 0:
-                                    try:
-                                        tmp_namespace = item.split("=")
-                                        namespace_dict[tmp_namespace[0].split(":")[1]] = tmp_namespace[1]
-                                    except Exception:
-                                        pass
+                            response_search = xmlstr.split(">")
+                            for item_resp in response_search:
+                                if item_resp.find(":Response") >= 0:
+                                    str_split = item_resp.split(" ")
+                                    for item in str_split:
+                                        if item.find("xmlns:") >= 0:
+                                            try:
+                                                tmp_namespace = item.split("=")
+                                                namespace_dict[tmp_namespace[0].split(":")[1]] = \
+                                                    (tmp_namespace[1], item)
+                                            except Exception:
+                                                pass
+                                    break
+
 
                             split_name = "EncryptedAssertion"
                             if xmlstr.find(split_name) < 0:

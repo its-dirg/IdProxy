@@ -88,6 +88,10 @@ AUTHORIZATION = {
 #Only useful if SAML authorization is activated.
 COPYSPCERT = False
 
+#True if you want to copy the encryption certificate from the calling SP and add it to the call to the underlying SAML
+# IdP. Only useful if SAML authorization is activated.
+COPYSPKEY = False
+
 #User database as a dictionary. You can offcourse use a database instead, but you must use the same interface
 #as the dictionary below.
 USERS = {
@@ -144,6 +148,7 @@ PASSWD = {
 CONFIG = {
     "entityid": "%s/idp.xml" % BASE,
     "description": "My Proxy IDP",
+    #CERT_GENERATION
     "service": {
         "aa": {
             "endpoints": {
@@ -163,6 +168,7 @@ CONFIG = {
         },
         "idp": {
             "name": "My proxy IdP",
+            #"sign_response": True,
             "endpoints": {
                 "single_sign_on_service": [
                     ("%s/sso/redirect" % BASE, BINDING_HTTP_REDIRECT),

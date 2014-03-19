@@ -123,6 +123,7 @@ CONFIG = {
             #"authn_requests_signed": "true",
             #Demands that the assertion is signed.
             #"want_assertions_signed": "true",
+            #"want_response_signed": "true",
             "endpoints": {
                 "assertion_consumer_service": [
                     (BASE + "/" + ASCREDIRECT, BINDING_HTTP_REDIRECT),

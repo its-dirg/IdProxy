@@ -4,6 +4,7 @@ from saml2.extension.pefim import SPCertEnc
 from saml2.md import Extensions
 
 import xmldsig as ds
+from idproxy import ServiceErrorException
 from idproxy.util.saml import Service
 from urlparse import parse_qs
 from saml2 import BINDING_HTTP_REDIRECT, element_to_extension_element
@@ -77,7 +78,7 @@ class SSO(object):
                     resp = SeeOther(str(value))
                     break
             else:
-                resp = ServiceError("Parameter error")
+                raise ServiceErrorException("Parameter error")
         else:
             resp = Response(http_args["data"], headers=http_args["headers"])
 
@@ -116,13 +117,13 @@ class SSO(object):
                         self.environ["REMOTE_ADDR"])
 
                     if not _entityid:
-                        return -1, ServiceError("No IdP to talk to")
+                        raise ServiceErrorException("No IdP to talk to")
                     self.logger.debug("IdP to talk to: %s" % _entityid)
                     return ecp.ecp_auth_request(_cli, _entityid, _rstate)
                 else:
-                    return -1, ServiceError('Faulty Accept header')
+                    raise ServiceErrorException('Faulty Accept header')
             else:
-                return -1, ServiceError('unknown ECP version')
+                raise ServiceErrorException('unknown ECP version')
 
         # Find all IdPs
         idps = self.sp.metadata.with_descriptor("idpsso")
@@ -181,7 +182,7 @@ class SSO(object):
                 # idps is a dictionary
                 idp_entity_id = idps.keys()[0]
             elif not len(idps):
-                return -1, ServiceError('Misconfiguration')
+                raise ServiceErrorException('Misconfiguration')
             else:
                 return -1, NotImplemented("No WAYF or DS present!")
 
@@ -218,9 +219,8 @@ class SSO(object):
             self.logger.debug("ht_args: %s" % ht_args)
         except Exception, exc:
             self.logger.exception(exc)
-            resp = ServiceError(
+            raise ServiceErrorException(
                 "Failed to construct the AuthnRequest: %s" % exc)
-            return resp(self.environ, self.start_response)
 
         # remember the request
         self.cache.outstanding_queries[_sid] = came_from
@@ -293,18 +293,14 @@ class ACS(Service):
                 response, binding, self.outstanding_queries)
         except UnknownPrincipal, excp:
             self.logger.error("UnknownPrincipal: %s" % (excp,))
-            resp = ServiceError("UnknownPrincipal: %s" % (excp,))
-            return resp(self.environ, self.start_response)
+            raise ServiceErrorException("UnknownPrincipal: %s" % (excp,))
         except UnsupportedBinding, excp:
             self.logger.error("UnsupportedBinding: %s" % (excp,))
-            resp = ServiceError("UnsupportedBinding: %s" % (excp,))
-            return resp(self.environ, self.start_response)
+            raise ServiceErrorException("UnsupportedBinding: %s" % (excp,))
         except VerificationError, err:
-            resp = ServiceError("Verification error: %s" % (err,))
-            return resp(self.environ, self.start_response)
+            raise ServiceErrorException("Verification error: %s" % (err,))
         except Exception, err:
-            resp = ServiceError("Other error: %s" % (err,))
-            return resp(self.environ, self.start_response)
+            raise ServiceErrorException("Other error: %s" % (err,))
 
         #logger.info("parsed OK")
         _resp = self.response.response

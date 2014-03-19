@@ -5,7 +5,7 @@ import base64
 from hashlib import sha1
 
 from saml2.httputil import Response, geturl
-from saml2 import BINDING_URI
+from saml2 import BINDING_URI, class_name
 from saml2 import BINDING_PAOS
 from saml2 import BINDING_SOAP
 from saml2 import BINDING_HTTP_REDIRECT
@@ -13,14 +13,13 @@ from saml2 import BINDING_HTTP_POST
 from saml2.httputil import NotFound
 from saml2.httputil import Unauthorized
 from saml2.httputil import BadRequest
-from saml2.httputil import ServiceError
 from saml2.ident import Unknown
 from saml2.s_utils import exception_trace
 from saml2.s_utils import UnknownPrincipal
 from saml2.s_utils import UnsupportedBinding
 from saml2.s_utils import PolicyError
 from saml2.sigver import verify_redirect_signature, encrypt_cert_from_item, pre_encrypt_assertion, \
-    CryptoBackendXMLSecurity
+    CryptoBackendXMLSecurity, CryptoBackendXmlSec1, pre_signature_part
 
 from idproxy.util.saml import Service
 
@@ -129,12 +128,10 @@ class SSO(Service):
             resp_args, _resp = self.verify_request(query, binding_in)
         except UnknownPrincipal, excp:
             logger.error("UnknownPrincipal: %s" % (excp,))
-            resp = ServiceError("UnknownPrincipal: %s" % (excp,))
-            return resp(self.environ, self.start_response)
+            raise excp
         except UnsupportedBinding, excp:
             logger.error("UnsupportedBinding: %s" % (excp,))
-            resp = ServiceError("UnsupportedBinding: %s" % (excp,))
-            return resp(self.environ, self.start_response)
+            raise excp
 
         if not _resp:
             identity = {}
@@ -159,7 +156,10 @@ class SSO(Service):
                     authnresponse = sp_handler_cache.authnresponse
                     namespace_list = sp_handler_cache.namespace_dict
                     if assertion is not None:
-                        override_sign_assertion = True
+                        if not self.idphandler.idp_server.config.getattr("sign_response", "idp"):
+                            override_sign_assertion = True
+                        else:
+                            override_sign_assertion = False
                         override_sign_response = False
                         override_encrypt_assertion = False
                     if encrypted_assertion is not None:
@@ -195,30 +195,54 @@ class SSO(Service):
                     encrypt_cert=encrypt_cert,
                     encrypt_assertion=encrypt_assertion,
                     **resp_args)
+                if self.idphandler.idp_server.config.getattr("sign_response", "idp"):
+                    if _resp.signature is None:
+                        _resp.signature = pre_signature_part(_resp.id, self.idphandler.idp_server.sec.my_cert, 1)
+                _class_sign = class_name(_resp)
+                _node_id_sign = _resp.id
                 if assertion is not None or encrypted_assertion is not None:
                     split_name = "Assertion"
                     if encrypted_assertion is not None:
                         split_name = "EncryptedAssertion"
                         assertion = encrypted_assertion
-                    _resp.c_ns_prefix = namespace_list
-                    xml_str = _resp.to_string()
+                    tmp_namespace_list = {}
+                    for k, v in namespace_list.iteritems():
+                        tmp_namespace_list[k] = v[0]
+                    #_resp.c_ns_prefix = tmp_namespace_list
+                    xml_str = str(_resp)
+
+                    replace_dict = {}
+                    response_search = xml_str.split(">")
+                    for item_resp in response_search:
+                        if item_resp.find(":Response") >= 0:
+                            namespace_search = item_resp.split(" ")
+                            for item in namespace_search:
+                                if item.find("xmlns:") >= 0:
+                                    try:
+                                        tmp_namespace = item.split("=")
+                                        for key, value in namespace_list.iteritems():
+                                            if value[0] == tmp_namespace[1]:
+                                                if item not in replace_dict:
+                                                    replace_dict[item] = value[1]
+                                    except Exception:
+                                        pass
+                            break
+                    for k, v in replace_dict.iteritems():
+                        xml_str = xml_str.replace(k, v)
+
                     xml_str_list = xml_str.split("Assertion")
 
                     start_index = (xml_str_list[0][::-1].find("<")) * -1
                     _resp = xml_str_list[0][:(start_index - 1)] + assertion + xml_str_list[2][1:]
-                    name1 = assertion[assertion.find('<') + 1:assertion.find(':')]
-                    name2 = xml_str_list[0][len(xml_str_list[0]) + start_index:-1]
-                    _resp.replace(name2, name1)
+                    #name1 = assertion[assertion.find('<') + 1:assertion.find(':')]
+                    #name2 = xml_str_list[0][len(xml_str_list[0]) + start_index:-1]
+                    #_resp.replace(name2, name1)
+
                     if self.idphandler.idp_server.config.getattr("sign_response", "idp"):
-                        _resp = CryptoBackendXMLSecurity().sign_statement(_resp,
-                                                                          None,
-                                                                          self.idphandler.idp_server.config.key_file,
-                                                                          None,
-                                                                          None)
+                        _resp = self.idphandler.idp_server.sec.sign_statement(_resp, _class_sign, node_id=_node_id_sign)
             except Exception, excp:
                 logging.error(exception_trace(excp))
-                resp = ServiceError("Exception: %s" % (excp,))
-                return resp(self.environ, self.start_response)
+                raise excp
 
         logger.info("AuthNResponse: %s" % _resp)
         http_args = self.idphandler.idp_server.apply_binding(self.binding_out,
@@ -382,8 +406,7 @@ class SLO(Service):
                 self.idphandler.idp_server.session_db.remove_authn_statements(msg.name_id)
             except KeyError, exc:
                 logger.error("ServiceError: %s" % exc)
-                resp = ServiceError("%s" % exc)
-                return resp(self.environ, self.start_response)
+                raise exc
 
         resp = self.idphandler.idp_server.create_logout_response(msg, [binding])
 
@@ -391,8 +414,7 @@ class SLO(Service):
             hinfo = self.idphandler.idp_server.apply_binding(binding, "%s" % resp, "", relay_state)
         except Exception, exc:
             logger.error("ServiceError: %s" % exc)
-            resp = ServiceError("%s" % exc)
-            return resp(self.environ, self.start_response)
+            raise exc
 
         #_tlh = dict2list_of_tuples(hinfo["headers"])
         delco = self.idphandler.delete_authorization_cookie(self.environ)

@@ -79,7 +79,7 @@ else:
     proxy = False
     password = True
 
-yes = raw_input("Type Yes(Y) for a quick setup of a onetime certificate based proxy.")
+yes = raw_input("Type Yes(Y) for a quick setup of a proxy anonymizer based encrypted assertion.")
 quicksetup_cert_anonym_proxy = (yes.lower() == "yes" or yes.lower() == "y")
 
 if proxy:
@@ -128,43 +128,76 @@ if proxy:
         discovery_server = raw_input("Url to the discovery server:")
         sp_str = sp_str.replace("DISCOSRV = None", "DISCOSRV = \"" + str(discovery_server) + "\"")
 
-    yes = raw_input("Type Yes(Y) to sign authn requests (all other answers is considered no):")
-    if (yes.lower() == "yes" or yes.lower() == "y"):
+    if not quicksetup_cert_anonym_proxy:
+        yes = raw_input("Type Yes(Y) to sign authn requests (all other answers is considered no):")
+    if quicksetup_cert_anonym_proxy or(yes.lower() == "yes" or yes.lower() == "y"):
         sp_str = sp_str.replace("#\"authn_requests_signed\": \"true\",",
                                 "\"authn_requests_signed\": \"true\",")
 
     if not quicksetup_cert_anonym_proxy:
+        yes = raw_input("Type Yes(Y) to demand that all SAML responses are signed:")
+    if quicksetup_cert_anonym_proxy or(yes.lower() == "yes" or yes.lower() == "y"):
+        sp_str = sp_str.replace("#\"want_response_signed\": \"true\",",
+                                "\"want_response_signed\": \"true\",")
+
+    if not quicksetup_cert_anonym_proxy:
+        yes = raw_input("Type Yes(Y) to sign all SAML responses are signed:")
+    if quicksetup_cert_anonym_proxy or (yes.lower() == "yes" or yes.lower() == "y"):
+        idp_str = idp_str.replace("#\"sign_response\": True,",
+                                "\"sign_response\": True,")
+
+    if not quicksetup_cert_anonym_proxy:
         yes = raw_input("Type Yes(Y) to verify that assertions are signed (all other answers is considered no):")
-    if yes.lower() == "yes" or yes.lower() == "y" or quicksetup_cert_anonym_proxy:
-        sp_str = sp_str.replace("#\"want_assertions_signed\": \"true\",",
-                                "\"want_assertions_signed\": \"true\",")
+        if yes.lower() == "yes" or yes.lower() == "y":
+            sp_str = sp_str.replace("#\"want_assertions_signed\": \"true\",",
+                                    "\"want_assertions_signed\": \"true\",")
 
     if not quicksetup_cert_anonym_proxy:
         yes = raw_input("Type Yes(Y) to verify certificates from an IdP (all other answers is considered no):")
-    if yes.lower() == "yes" or yes.lower() == "y" or quicksetup_cert_anonym_proxy:
-        sp_str = sp_str.replace("#\"validate_certificate\": True,",
-                                "\"validate_certificate\": True,")
+        if yes.lower() == "yes" or yes.lower() == "y":
+            sp_str = sp_str.replace("#\"validate_certificate\": True,",
+                                    "\"validate_certificate\": True,")
 
     if not quicksetup_cert_anonym_proxy:
-        yes = raw_input("Type Yes(Y) to generate new certificates for each authn request (all other answers is considered no):")
-    else:
+        yes = raw_input("Type Yes(Y) to copy encryption assertion from the underlying IdP to the calling SP:")
+    if quicksetup_cert_anonym_proxy or yes.lower() == "yes" or yes.lower() == "y":
+        sp_str = sp_str.replace("COPY_ASSERTION = False",
+                                "COPY_ASSERTION = True")
+
+    if not quicksetup_cert_anonym_proxy:
+        yes = raw_input("Type Yes(Y) to copy certificates from the calling SP to the underlying IdP:")
+        if yes.lower() == "yes" or yes.lower() == "y":
+            idp_str = idp_str.replace("COPYSPCERT = False",
+                                    "COPYSPCERT = True")
+
+    if not quicksetup_cert_anonym_proxy:
+        yes = raw_input("Type Yes(Y) to copy encryption certificates from the calling SP to the underlying IdP:")
+    if quicksetup_cert_anonym_proxy or yes.lower() == "yes" or yes.lower() == "y":
+        idp_str = idp_str.replace("COPYSPKEY = False",
+                                "COPYSPKEY = True")
+
+    if not quicksetup_cert_anonym_proxy:
+        yes = raw_input("Type Yes(Y) to generate new certificates(IdP and SP) for each authn request (all other answers is considered no):")
         print "Type the information that will be included on the generated the certificates."
-    if yes.lower() == "yes" or yes.lower() == "y" or quicksetup_cert_anonym_proxy:
-        tmp_generate_cert_str = generate_cert_str
-        country_code = raw_input("Country code(2 letters):")
-        state = raw_input("State:")
-        city = raw_input("City:")
-        org = raw_input("Organisation:")
-        unit = raw_input("Organisation unit:")
-        tmp_generate_cert_str = tmp_generate_cert_str.replace("COUNTRY_CODE", state)
-        tmp_generate_cert_str = tmp_generate_cert_str.replace("STATE_REPLACE", state)
-        tmp_generate_cert_str = tmp_generate_cert_str.replace("CITY_REPLACE", city)
-        tmp_generate_cert_str = tmp_generate_cert_str.replace("ORG_REPLACE", org)
-        tmp_generate_cert_str = tmp_generate_cert_str.replace("UNIT_REPLACE", unit)
-        sp_str = sp_str.replace("#CERT_GENERATION", tmp_generate_cert_str)
-        sp_str = sp_str.replace("sp_cert/localhost.key", "root_cert/localhost.ca.key")
-        sp_str = sp_str.replace("sp_cert/localhost.crt", "root_cert/localhost.ca.crt")
-        generate_root_cert = True
+        if yes.lower() == "yes" or yes.lower() == "y":
+            tmp_generate_cert_str = generate_cert_str
+            country_code = raw_input("Country code(2 letters):")
+            state = raw_input("State:")
+            city = raw_input("City:")
+            org = raw_input("Organisation:")
+            unit = raw_input("Organisation unit:")
+            tmp_generate_cert_str = tmp_generate_cert_str.replace("COUNTRY_CODE", state)
+            tmp_generate_cert_str = tmp_generate_cert_str.replace("STATE_REPLACE", state)
+            tmp_generate_cert_str = tmp_generate_cert_str.replace("CITY_REPLACE", city)
+            tmp_generate_cert_str = tmp_generate_cert_str.replace("ORG_REPLACE", org)
+            tmp_generate_cert_str = tmp_generate_cert_str.replace("UNIT_REPLACE", unit)
+            sp_str = sp_str.replace("#CERT_GENERATION", tmp_generate_cert_str)
+            sp_str = sp_str.replace("sp_cert/localhost.key", "root_cert/localhost.ca.key")
+            sp_str = sp_str.replace("sp_cert/localhost.crt", "root_cert/localhost.ca.crt")
+            idp_str = idp_str.replace("#CERT_GENERATION", tmp_generate_cert_str)
+            idp_str = idp_str.replace("idp_cert/localhost.key", "root_cert/localhost.ca.key")
+            idp_str = idp_str.replace("idp_cert/localhost.crt", "root_cert/localhost.ca.crt")
+            generate_root_cert = True
 
 if not password:
     op_str = op_str.replace("    \"PASSWORD\": {\"ACR\": \"PASSWORD\", \"WEIGHT\": 1, \"URL\": ISSUER, \"USER_INFO\": \"SIMPLE\"},",
