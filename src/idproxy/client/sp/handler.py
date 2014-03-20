@@ -158,7 +158,8 @@ class SpHandler:
         :return: The unique identifier for a user.
         """
         #TODO this must be updated for Saml to Saml.
-        sub = self.ophandler.get_sub_from_accesstoken(environ)
+        if self.ophandler is not None:
+            sub = self.ophandler.get_sub_from_accesstoken(environ)
         if sub is None:
             if session is not None and SpHandler.SPHANDLERFORSUB in session:
                 sub = session[SpHandler.SPHANDLERFORSUB]
@@ -179,7 +180,8 @@ class SpHandler:
                 if sp_handler_cache.auth:
                     if self.verify_timeout(sp_handler_cache.timeout) or sp_handler_cache.attributes is None:
                         #TODO This is not enough for Saml to Saml
-                        self.ophandler.filter_auth_cookie(environ)
+                         if self.ophandler is not None:
+                            self.ophandler.filter_auth_cookie(environ)
                 return environ
         return environ
 
