@@ -92,7 +92,6 @@ if __name__ == '__main__':
     parser.add_argument(dest="idpconfig")
     parser.add_argument(dest="spconf")
     args = parser.parse_args()
-    config = importlib.import_module(args.config)
 
     #Application in debug mode if true.
     debug = False
@@ -111,6 +110,7 @@ if __name__ == '__main__':
 
     global ophandler
     if server_conf.OP_FRONTEND:
+        config = importlib.import_module(args.config)
         ophandler = OpHandler(logger, config, LOOKUP, sphandler, test, debug)
         sphandler.ophandler = ophandler
     else:
@@ -125,15 +125,15 @@ if __name__ == '__main__':
 
 
     global SRV
-    SRV = wsgiserver.CherryPyWSGIServer(('0.0.0.0', config.PORT), SessionMiddleware(application,
+    SRV = wsgiserver.CherryPyWSGIServer(('0.0.0.0', server_conf.PORT), SessionMiddleware(application,
                                                                                     server_conf.SESSION_OPTS))
     SRV.stats['Enabled'] = True
     #SRV = wsgiserver.CherryPyWSGIServer(('0.0.0.0', config.PORT), application)
-    if config.HTTPS:
+    if server_conf.HTTPS:
         SRV.ssl_adapter = ssl_pyopenssl.pyOpenSSLAdapter(server_conf.SERVER_CERT, server_conf.SERVER_KEY,
                                                          server_conf.CERT_CHAIN)
     logger.info("Server starting")
-    print "SP listening on port: %s" % config.PORT
+    print "Server listening on port: %s" % server_conf.PORT
     try:
         SRV.start()
     except KeyboardInterrupt:
