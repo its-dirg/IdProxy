@@ -158,6 +158,7 @@ class SpHandler:
         :return: The unique identifier for a user.
         """
         #TODO this must be updated for Saml to Saml.
+        sub = None
         if self.ophandler is not None:
             sub = self.ophandler.get_sub_from_accesstoken(environ)
         if sub is None:
