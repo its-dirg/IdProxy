@@ -43,9 +43,9 @@ def application(environ, start_response):
         environ = sphandler.verify_sp_user_validity(session, environ, path)
         http_helper.log_request()
         response = None
-        if ophandler.verify_provider_requests(path):
+        if server_conf.OP_FRONTEND and ophandler.verify_provider_requests(path):
             response = ophandler.handle_provider_requests(environ, start_response, path, session)
-        if idphandler.verify_provider_requests(path, environ):
+        if server_conf.IDP_FRONTEND and idphandler.verify_provider_requests(path, environ):
             response = idphandler.handle_provider_requests(environ, start_response, path)
         elif sphandler.verify_sp_requests(path):
             response = sphandler.handle_sp_requests(environ, start_response, path, session)
@@ -110,11 +110,19 @@ if __name__ == '__main__':
     sphandler = SpHandler(logger, args)
 
     global ophandler
-    ophandler = OpHandler(logger, config, LOOKUP, sphandler, test, debug)
-    sphandler.ophandler = ophandler
+    if server_conf.OP_FRONTEND:
+        ophandler = OpHandler(logger, config, LOOKUP, sphandler, test, debug)
+        sphandler.ophandler = ophandler
+    else:
+        ophandler = None
+        sphandler.ophandler = None
 
     global idphandler
-    idphandler = IdPHandler(args, LOOKUP, sphandler)
+    if server_conf.IDP_FRONTEND:
+        idphandler = IdPHandler(args, LOOKUP, sphandler)
+    else:
+        idphandler = None
+
 
     global SRV
     SRV = wsgiserver.CherryPyWSGIServer(('0.0.0.0', config.PORT), SessionMiddleware(application,

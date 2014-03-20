@@ -124,6 +124,18 @@ if proxy:
     else:
         discovery = False
 
+    if not quicksetup_cert_anonym_proxy:
+        yes = raw_input("Type Yes(Y) to inactivate the OP frontend:")
+    if quicksetup_cert_anonym_proxy or yes.lower() == "yes" or yes.lower() == "y":
+        server_str = server_str.replace("OP_FRONTEND = True",
+                                "OP_FRONTEND = False")
+
+    if not quicksetup_cert_anonym_proxy:
+        yes = raw_input("Type Yes(Y) to inactivate the IdP frontend:")
+        if yes.lower() == "yes" or yes.lower() == "y":
+            server_str = server_str.replace("IDP_FRONTEND = True",
+                                    "IDP_FRONTEND = False")
+
     if discovery:
         discovery_server = raw_input("Url to the discovery server:")
         sp_str = sp_str.replace("DISCOSRV = None", "DISCOSRV = \"" + str(discovery_server) + "\"")
@@ -222,6 +234,11 @@ else:
 
 if password:
     print "Connect to the proxy with your SP or RP and login with the user test1 and password qwerty."
+
+server_str = server_str.replace("localhost", host)
+op_str = op_str.replace("localhost", host)
+idp_str = idp_str.replace("localhost", host)
+sp_str = sp_str.replace("localhost", host)
 
 write_str_to_file('test_server_conf.py', server_str)
 write_str_to_file('test_op_conf.py', op_str)

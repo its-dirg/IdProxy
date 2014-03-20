@@ -18,6 +18,12 @@ ISSUER = "%s:%s" % (BASEURL, PORT)
 #Filename for log.
 LOG_FILE = 'idproxy_server.log'
 
+#Set to true if the proxy should act as an SAML IdP
+IDP_FRONTEND = True
+
+#Set to true if the proxy should act as an OpenId Connect provider.
+OP_FRONTEND = True
+
 #If HTTPS is true you have to assign the server cert, key and certificate chain.
 SERVER_CERT = "httpsCert/localhost.crt"
 SERVER_KEY = "httpsCert/localhost.key"
