@@ -83,5 +83,3 @@ def generateCert(cert_info=None):
     osw.write_str_to_file("sn.txt", str(sn))
 
     return sn
-
-generateCert();
