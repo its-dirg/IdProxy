@@ -204,12 +204,13 @@ class SSO(object):
 
             if _cli.authn_requests_signed:
                 _sid = saml2.s_utils.sid(_cli.seed)
-                msg_str = _cli.create_authn_request(destination, vorg=vorg_name, sign=_cli.authn_requests_signed,
+                req_id, msg_str = _cli.create_authn_request(destination, vorg=vorg_name, sign=_cli.authn_requests_signed,
                                                     message_id=_sid, client_crt=cert_str, extensions=extensions)
+                _sid = req_id
             else:
-                req = _cli.create_authn_request(destination, vorg=vorg_name, sign=False)
+                req_id, req = _cli.create_authn_request(destination, vorg=vorg_name, sign=False)
                 msg_str = "%s" % req
-                _sid = req.id
+                _sid = req_id
 
             _rstate = rndstr()
             self.cache.relay_state[_rstate] = came_from
