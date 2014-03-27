@@ -169,6 +169,7 @@ CONFIG = {
         "idp": {
             "name": "My proxy IdP",
             #"sign_response": True,
+            #"encrypt_assertion": True,
             "endpoints": {
                 "single_sign_on_service": [
                     ("%s/sso/redirect" % BASE, BINDING_HTTP_REDIRECT),

@@ -12,7 +12,7 @@ if HTTPS:
 else:
     BASEURL = "http://%s" % HOST
 
-#Full URL to the OP server
+#Full URL to the server
 ISSUER = "%s:%s" % (BASEURL, PORT)
 
 #Filename for log.
