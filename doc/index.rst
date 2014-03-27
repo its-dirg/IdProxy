@@ -11,4 +11,4 @@ IdProxy is an Op (OAuth2 and OpenId connect provider) and IdP (SAML) proxy again
    usage
    install
    setup
-
+   run
