@@ -74,20 +74,41 @@ Contains general configurations for the server and must be renamed to server_con
 
 `Click here to view the example file. <https://github.com/its-dirg/IdProxy/blob/master/server_conf.example>`_
 
-All configuration parameters are described in the file and most of them are trivial.
+All configuration parameters are described with comments in the file, but you will find a lite more
+information on this page.
 
-Here follows some extended information about the more complex configurations.
+PORT
+""""
+Port for the webserver.
 
-SESSION_OPTS
-""""""""""""
-This is a configuration parameter for Beaker Sessions. To understand more about how to configure the session object
-please read:
-http://beaker.readthedocs.org/en/latest/index.html
+HTTPS
+"""""
+True if HTTPS should be used, false is equal to HTTP.
+
+HOST
+""""
+The hostname of the server. Can be the server IP.
+
+BASEURL
+"""""""
+The url to the server without port. Depends on HOST and HTTPS.
+
+ISSUER
+""""""
+Full URL to the server including port.
 
 LOG_FILE
 """"""""
 Points out the main log file for IdProxy. If you get an error displayed in the browser with an uuid, search in this
 file for the displayed uuid to get the matching error.
+
+IDP_FRONTEND
+""""""""""""
+Set to true if the proxy should act as an SAML IdP.
+
+OP_FRONTEND
+"""""""""""
+Set to true if the proxy should act as an OpenId Connect provider.
 
 SERVER_CERT
 """""""""""
@@ -104,13 +125,19 @@ CERT_CHAIN
 Certificate chains is only used by CA certificates and not self signed certificates that the quicksetup.py generates.
 If you have a CA created cert the add your certificate chain here.
 
+SESSION_OPTS
+""""""""""""
+This is a configuration parameter for Beaker Sessions. To understand more about how to configure the session object
+please read:
+http://beaker.readthedocs.org/en/latest/index.html
+
 idp_conf.example
 ^^^^^^^^^^^^^^^^
 Contains configuration for the frontend SAML IdP. Should be renamed to idp_conf.py or equal.
 
 `Click here to view the example file. <https://github.com/its-dirg/IdProxy/blob/master/idp_conf.example>`_
 
-All configuration parameters are described in the file and most of them are trivial.
+All configuration parameters are described in the file.
 
 Here follows some extended information about the more complex configurations.
 
@@ -118,6 +145,19 @@ xmlsec_path
 """""""""""
 You must verify that you have a correct full path to the xmlsec binary in your system or you will get some hard traced
 errors.
+
+BASE
+""""
+Do not change! Must be the full URL including port, defined in server_conf.example.
+
+FULL_PATH
+"""""""""
+Must point to the complete path on disk to this file! Needed by the script create_metadata.sh and the IdP to find all
+configurations. No need to change this!
+
+WORKING_DIR
+"""""""""""
+This is the directory for the IdP.
 
 YUBIKEY_SERVER
 """"""""""""""
@@ -209,6 +249,10 @@ User database as a dictionary. These are the keys and values returned in the ass
 You can use a database instead as long as it has a dictionary interface, like Sqllite3Dict and that you have the
 same structure of the database as the dictionary in the example.
 
+EXTRA
+"""""
+Extra information about the user.
+
 PASSWD
 """"""
 Username as key and password as value. This dictionary is used for username/password validations.
@@ -219,6 +263,8 @@ CONFIG
 """"""
 This is a pysaml2 configuration dictionary and you should read the pysaml2 documentation to understand it.
 
+https://dirg.org.umu.se/page/pysaml2
+
 I will give some hints on good to know parameters.
 
 Here follows some configurations that can be used directly in the config dictionary:
@@ -227,7 +273,9 @@ Here follows some configurations that can be used directly in the config diction
     True if the metadata specified certificates for signatures always must be used.
     False if the metadata specified certificates for signatures is prefered,
     but it is also allowed to use the signature certificates in the authn request. ::
+
     "only_use_keys_in_metadata": False,
+
 * Generate certificates for signature
     To generate certificates for signatures for each call you have to add keys for generate_cert_info,
     tmp_key_file and tmp_cert_file. You can add a generation algorithm in the cert_handler_extra_class parameter,
@@ -250,3 +298,153 @@ Here follows some configurations that can be used directly in the config diction
         "tmp_key_file": WORKING_DIR + "idp_cert/tmp_mykey.pem",
         "tmp_cert_file": WORKING_DIR + "idp_cert/tmp_mycert.pem",
         "validate_certificate": True,
+
+* Signing the authn response.
+    If you want your IdP to sign the authn request response. You can add sign_response to your idp configuration. ::
+
+    "sign_response": True
+
+* Enrtypt assertion.
+    If you want the proxy to encrypt the assertion, you can add encrypt_assertion to the idp configuration.
+    This will have no effect if COPY_ASSERTION = True for the proxy SP configuration. ::
+
+    "encrypt_assertion": True,
+
+sp_conf.example
+^^^^^^^^^^^^^^^^
+
+`Click here to view the example file. <https://github.com/its-dirg/IdProxy/blob/master/sp_conf.example>`_
+
+All configuration parameters are described in the file.
+
+Here follows some extended information about the more complex configurations.
+
+xmlsec_path
+"""""""""""
+You must verify that you have a correct full path to the xmlsec binary in your system or you will get some hard traced
+errors.
+
+DISCOSRV
+""""""""
+Url to a discovery server for SAML. None implies not using one.
+
+WAYF
+""""
+Url to a wayf for SAML. None implies not using one.
+
+PORT
+""""
+Port for the webserver. Must be same as server_conf.example.
+
+HTTPS
+"""""
+True if HTTPS should be used, false is equal to HTTP. Must be same as server_conf.example.
+
+HOST
+""""
+The hostname of the server. Can be the server IP. Must be same as server_conf.example.
+
+BASEURL
+"""""""
+The url to the server without port. Depends on HOST and HTTPS. Must be same as server_conf.example.
+
+ISSUER
+""""""
+Full URL to the server including port. Must be same as server_conf.example.
+
+BASE
+""""
+Full URL to the server including port.
+
+SPVERIFYBASE
+""""""""""""
+The base url for the SP at the server.
+
+SPVERIFYBASEIDP
+"""""""""""""""
+The base url for verification of the response from a IdP.
+
+ASCREDIRECT
+"""""""""""
+The BASE url where the Idp performs the redirect after a authn request from the SP.
+For the cookies to work do not use subfolders.
+
+ASCPOST
+"""""""
+The BASE url where the Idp performs a post after a authn request from the SP.
+For the cookies to work do not use subfolders.
+
+ASCVERIFYPOSTLIST
+"""""""""""""""""
+Regual expression to match a post from Idp to SP.
+
+ASCVERIFYREDIRECTLIST
+"""""""""""""""""""""
+Regual expression to match a redirect from Idp to SP.
+
+FULL_PATH
+"""""""""
+Must point to the complete path on disk to this file!
+Needed by the script create_metadata.sh and the SP to find all configurations.
+No need to change this!
+
+WORKING_DIR
+"""""""""""
+This is the directory for the SP.
+
+CACHE
+"""""
+A shared server cache for the IdP. The cache expects a dictionary, but you can use a database by implementing the
+dictionary interface.
+
+COPY_ASSERTION
+""""""""""""""
+Set this value to true if you want to copy the assertion from the IdP to the SP without any changes by the proxy.
+For example if the assertion is encrypted with a key that from the SP you have to copy the complete assertion.
+This is a special case and the normal value is false!
+If you copy the assertion the SP must be aware that the assertion will not contain the same destination information as
+the response.
+
+CERT_TIMEOUT
+""""""""""""
+The amount of time in minutes an SP cert will be saved in the cache.
+
+ANONYMIZE
+"""""""""
+True if you want to anonymize the assertion. If COPY_ASSERTION is true this flag is of no use.
+
+ANONYMIZE_SALT
+""""""""""""""
+This salt is the key to perform a more secure anonymize service.
+YOU SHOULD NEVER USE THE DEFAULT VALUE! Please change this!
+
+OPENID2SAMLMAP
+""""""""""""""
+This is a map for Open Id connect to Saml2. The proxy will give the same response for OAuth2.
+
+CONFIG
+""""""
+Traditional pysaml2 configuration for a SP. View more documentation for pysaml2.
+
+https://dirg.org.umu.se/page/pysaml2
+
+
+Here follows some parameters that are good to know for the proxy.
+
+* Sign the reqeust from the proxy SP.
+    Add the authn_request_signed parameter to the sp configuration to sign the authn request from the proxy sp. ::
+
+        "authn_requests_signed": "true",
+
+* Demand that the assertion from the IdP is signed.
+    Add the want_assertions_signed parameter to the sp configuration to make the proxy reject all assertions that are
+    not signed. ::
+
+        "want_assertions_signed": "true",
+
+* Demand that the response from the IdP is signed.
+    Add the want_response_signed parameter to the sp configuration to make the proxy reject all responses that are not
+    not signed. ::
+
+        "want_response_signed": "true",
+
