@@ -1,7 +1,5 @@
 #!/bin/sh
 rm -f idproxy*
-cd ..
-sphinx-apidoc -F -o /doc/ /src/idproxy
-cd doc
+sphinx-apidoc -F -o ../doc/ ../src/idproxy
 make clean
 make html
