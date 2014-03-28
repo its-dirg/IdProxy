@@ -85,6 +85,7 @@ OP_PRIVATE_KEYS = {
     "rsa": {
         #Your RSA PEM PRIVATE KEY
         "key": "opKeys/localhost.key",
+        #enc = Encryption and sig = Signature
         "usage": ["enc", "sig"]
     }
 }
