@@ -183,6 +183,10 @@ SYM_KEY
 """""""
 Symetric key for the IdP server. Any phrase will work, but it must be 16 characters! You must change this key!
 
+CAS_SERVER
+""""""""""
+URL to your CAS server if you wish to perform a CAS authentication.
+
 CACHE_1 and CACHE_2
 """""""""""""""""""
 Two internal caches.
@@ -447,4 +451,234 @@ Here follows some parameters that are good to know for the proxy.
     not signed. ::
 
         "want_response_signed": "true",
+
+op_conf.example
+^^^^^^^^^^^^^^^^
+
+`Click here to view the example file. <https://github.com/its-dirg/IdProxy/blob/master/op_conf.example>`_
+
+All configuration parameters are described in the file.
+
+Here follows some extended information about the more complex configurations.
+
+PORT
+""""
+Port for the webserver. Must be same as server_conf.example.
+
+HTTPS
+"""""
+True if HTTPS should be used, false is equal to HTTP. Must be same as server_conf.example.
+
+HOST
+""""
+The hostname of the server. Can be the server IP. Must be same as server_conf.example.
+
+BASEURL
+"""""""
+The url to the server without port. Depends on HOST and HTTPS. Must be same as server_conf.example.
+
+ISSUER
+""""""
+Full URL to the server including port. Must be same as server_conf.example.
+
+CAS_SERVER
+""""""""""
+URL to your CAS server if you wish to perform a CAS authentication.
+
+CAS_SERVICE_URL
+"""""""""""""""
+The response URL to this server from the CAS server. No need to change the value.
+
+AUTHORIZATION
+"""""""""""""
+This parameter describes how the proxy will authorize users. The proxy can authorize the user with SAML, CAS, Yubikey,
+password or with a chain of authentications. The authorization object is a dictionary where the key defines the
+authorization method. Each key points at a dictionary that defines the acr value for the authentication method, weight,
+base url for the response and where user information can be collected.
+
+| Example:
+::
+
+    AUTHORIZATION = {
+        "SAML": {"ACR": "SAML", "WEIGHT": 3, "URL": ISSUER, "USER_INFO": "SAML"},
+        "CAS": {"ACR": "CAS", "WEIGHT": 2, "URL": ISSUER, "USER_INFO": "LDAP"},
+        "YUBIKEY": {"ACR": "YUBIKEY", "WEIGHT": 1, "URL": ISSUER, "USER_INFO": "SIMPLE"},
+        "PASSWORD": {"ACR": "PASSWORD", "WEIGHT": 1, "URL": ISSUER, "USER_INFO": "SIMPLE"},
+        "PASSWORD_YUBIKEY": {"ACR": "PASSWORD_YUBIKEY", "WEIGHT": 1, "URL": ISSUER, "USER_INFO": "SIMPLE"},
+        "MULTIPLEAUTHN": {
+            "ACR": "MultipleAuthnTest",
+            "WEIGHT": 4,
+            "URL": ISSUER,
+            "USER_INFO": "SAML",
+            "AUTHNLIST": [
+                {"ACR": "PASSWORD"},
+                {"ACR": "CAS"},
+               {"ACR": "SAML"}
+            ]
+
+        }
+    }
+
+
+The following authorization keys exists:
+* SAML
+    This is make your proxy work as a OP to SAML proxy. You must use SAML as stand alone or as a part of the
+    MULTIPLEAUTHN authorization key. By defining SAML in the dictionary you will activate the Service Provider
+    configured in the sp_conf.example file.
+* CAS
+    This will make your proxy work as a SAML to CAS proxy. For this authorization to work you must have a correct value
+    in the CAS_SERVER parameter.
+* YUBIKEY
+    Will use username/yubikey for authorization without any proxy functionality. YUBIKEY_SERVER och YUBIKEY_DB must
+    be configured.
+* PASSWORD
+    Will use username/password for authorization with out any proxy functionality.
+* PASSWORD_YUBIKEY
+    Will use username/yubikey/password for authorization with out any proxy functionality.
+* MULTIPLEAUTHN
+    If you want to add yubikey authorization to your CAS or SAML IdP server you can use MULTIPLEAUTHN or just create an
+    OP to CAS to SAML proxy. This key contains one additional parameter in the sub dictionary; AUTHNLIST. ::
+        "AUTHNLIST": [
+        {"ACR": "PASSWORD_YUBIKEY"},
+        {"ACR": "CAS"},
+        {"ACR": "SAML"}
+        ]
+    You list all authorizations that should take place when calling the proxy and the order matters.
+    In the example above the user will have to login with username/yubike/password, then be authenticated at a
+    CAS server and an designated IdP. You should always have SAML last in the list, to retrive the user information
+    from the IdP.
+| WEIGHT defines the weight between the authentication methods.
+| URL used internally to define the URL that handles the authentication method. Just leave it with ISSUER.
+| The following USER_INFO values can be used:
+* SAML
+    Only useful for acr value SAML. User information is collected from the underlying IdP.
+* LDAP
+    User information is collected from a LDAP server. LDAP and LDAP_EXTRAVALIDATION must be configured correctly.
+* SIMPLE
+    User infromation is collected from the dictionary defined in the configuration parameter USERDB.
+
+
+FULL_PATH
+"""""""""
+Must point to the complete path on disk to this file! No need to change this!
+
+WORKING_DIR
+"""""""""""
+Must point to the complete path on disk to this file and end with a slash.
+
+OP_CACHE_1 and OP_CACHE_2
+"""""""""""""""""""""""""
+Two internal caches.
+
+As default a dictionary that only works in a single server solution. If your are using a distributed environment you
+should use a database or file representation for the dictionary implementation.
+
+An example of a database dictionary is Sqllite3Dict(WORKING_DIR + "idp_cache1.sqlite3").
+
+YUBIKEY_SERVER
+""""""""""""""
+Points to the yubikey validation server. The default value points at yubico's own server. You can point at any yubikey
+validation server, for example pyYubitool.
+
+YUBIKEY_DB
+""""""""""
+If you want to use Yubikey as a authentication method you have to point out a database containing information about
+the valid yubikeys.
+
+To create a database use this script: ::
+
+    https://github.com/HaToHo/pyYubitool/blob/master/db/pyYubitool_dbsetup.py
+
+You should also learn about yubikey: ::
+    https://www.yubico.com
+
+You will also need to install: ::
+    http://www.yubico.com/products/services-software/personalization-tools/
+
+AUTHORIZATIONPAGE_PASSWORD
+""""""""""""""""""""""""""
+The page in mako/htdocs that will handle user/password login.
+
+AUTHORIZATIONPAGE_YUBIKEY
+"""""""""""""""""""""""""
+The page in mako/htdocs that will handle user/yubikey login.
+
+AUTHORIZATIONPAGE_PASSWORD_YUBIKEY
+""""""""""""""""""""""""""""""""""
+The page in mako/htdocs that will handle user/password/yubikey login.
+
+SYM_KEY
+"""""""
+Symetric key for the OP server. Any phrase will work, but it must be 16 characters! You must change this key!
+
+LOG_FILE
+""""""""
+Filename for OP server log.
+
+COOKIENAME
+""""""""""
+The pyoidc based op server uses cookies to maintain a session. This is is the name of that cookie.
+
+COOKIETTL
+"""""""""
+Time to live for the cookie.
+
+OP_PRIVATE_KEYS
+"""""""""""""""
+Private RSA key for the provider. ::
+
+    OP_PRIVATE_KEYS = {
+        "rsa": {
+            #Your RSA PEM PRIVATE KEY
+            "key": "opKeys/localhost.key",
+            #enc = Encryption and sig = Signature
+            "usage": ["enc", "sig"]
+        }
+    }
+
+OP_PUBLIC_KEYS
+""""""""""""""
+Path for the public RSA key for the provider. You can use certgeneration.py to provide you with a correct file.
+For more information read: http://openid.net/specs/draft-jones-json-web-key-03.html
+
+LDAP
+""""
+Configuration for your LDAP server. ::
+
+    LDAP = {
+        "uri": "ldap://my.ldap.com",
+        "base": "dc=umu, dc=se",
+        "filter_pattern": "(uid=%s)",
+        "user": "",
+        "passwd": "",
+        "attr": ["eduPersonScopedAffiliation", "eduPersonAffiliation"],
+    }
+
+LDAP_EXTRAVALIDATION
+""""""""""""""""""""
+Verifies the result in one or more attributes.
+
+| For example:
+::
+
+    LDAP_EXTRAVALIDATION = {
+        "verify_attr": "eduPersonAffiliation",
+        "verify_attr_valid": ['employee', 'staff', 'student']
+    }
+
+Verifies that eduPersonAffiliation contains one of the values employee, staff or student.
+
+PASSWD
+""""""
+Username as key and password as value. This dictionary is used for username/password validations.
+You can use a database instead as long as it has a dictionary interface, like Sqllite3Dict and that you have the
+same structure of the database as the dictionary in the example.
+
+USERDB
+""""""
+User database as a dictionary. These are the keys and values returned from the OP the RP.
+You can use a database instead as long as it has a dictionary interface, like Sqllite3Dict and that you have the
+same structure of the database as the dictionary in the example.
+
+
 
