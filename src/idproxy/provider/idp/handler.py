@@ -12,7 +12,6 @@ from idproxy.provider.idp.auth.unspecified import UnspecifiedAuth
 
 
 __author__ = 'haho0032'
-import server_conf
 import re
 import base64
 import time
@@ -113,7 +112,7 @@ class IdPHandler:
 
     IDP_AUTH_COOKIE_NAME = "idpauthnproxy"
 
-    def __init__(self, args, template_lookup, sphandler):
+    def __init__(self, args, template_lookup, sphandler, ISSUER):
         idpconfig = importlib.import_module(args.idpconfig)
         self.copy_sp_cert = idpconfig.COPYSPCERT
         self.copy_sp_key = idpconfig.COPYSPKEY
@@ -123,10 +122,10 @@ class IdPHandler:
         self.cas_server = idpconfig.CAS_SERVER
         self.yubikey_db = idpconfig.YUBIKEY_DB
         self.yubikey_server = idpconfig.YUBIKEY_SERVER
-        self.service_url = server_conf.ISSUER + "/" + self.IDP_VERIFY_URL
+        self.service_url = ISSUER + "/" + self.IDP_VERIFY_URL
         self.template_lookup = template_lookup
         self.idp_server = self.setup_saml2_server(args.idpconfig, idpconfig, idpconfig.SYM_KEY)
-        self.authn_broker = self.setup_authn_broker(server_conf.ISSUER, sphandler, idpconfig.AUTHORIZATION)
+        self.authn_broker = self.setup_authn_broker(ISSUER, sphandler, idpconfig.AUTHORIZATION)
         self.auth_cookie = None
         self.non_authn_urls = [
             (r'%s?(.*)$' % self.IDP_VERIFY_URL, self.do_verify),

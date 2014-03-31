@@ -119,7 +119,7 @@ if __name__ == '__main__':
 
     global idphandler
     if server_conf.IDP_FRONTEND:
-        idphandler = IdPHandler(args, LOOKUP, sphandler)
+        idphandler = IdPHandler(args, LOOKUP, sphandler, server_conf.ISSUER)
     else:
         idphandler = None
 
