@@ -43,6 +43,17 @@ First install the following for your OS.
     Can be installed with easy_install for some systems. Just make sure you get version 2.6.1. ::
 
         sudo easy_install pycrypto
+
+    To verify version use pip freeze or to really be sure pkg_resources. ::
+
+    pip freeze | grep pycrypto
+    pycrypto==2.6.1
+
+    python
+    >>>> import pkg_resources
+    >>>> pkg_resources.get_distribution("pycrypto").version
+    '2.6.1'
+
 #. pyOpenSSL
 
 
@@ -71,3 +82,4 @@ The rest can be installed with easy_install, pip or get from github: ::
     git clone https://github.com/its-dirg/IdProxy
     cd IdProxy
     sudo python setup.py install
+
