@@ -46,13 +46,12 @@ First install the following for your OS.
 
     To verify version use pip freeze or to really be sure pkg_resources. ::
 
-    pip freeze | grep pycrypto
-    pycrypto==2.6.1
-
-    python
-    >>>> import pkg_resources
-    >>>> pkg_resources.get_distribution("pycrypto").version
-    '2.6.1'
+        pip freeze | grep pycrypto
+        pycrypto==2.6.1
+        python
+        >>>> import pkg_resources
+        >>>> pkg_resources.get_distribution("pycrypto").version
+        '2.6.1'
 
 #. pyOpenSSL
 
