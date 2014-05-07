@@ -278,7 +278,7 @@ class ACS(Service):
         self.response = None
         self.kwargs = kwargs
 
-    def do(self, response, binding, relay_state="", mtype="response"):
+    def do(self, response, binding, relay_state="", mtype="response", encrypt_cert=None):
         """
         :param response: The SAML response, transport encoded
         :param binding: Which binding the query came in over

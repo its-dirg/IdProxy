@@ -39,7 +39,7 @@ logger = logging.getLogger("pyOpSamlProxy.provider.idp.util")
 
 
 #This class is responsible for wrapping a pysaml2 IdP implementation.
-class IdPHandler:
+class IdPHandler(object):
     AUTHORIZATION_MULTIPLEAUTHN = "MULTIPLEAUTHN"
     #See idp_confy.py. Name of Saml authorization in the AUTHORIZATION dictionary.
     AUTHORIZATION_SAML = "SAML"

@@ -17,10 +17,10 @@ import re
 from saml2.client import Saml2Client
 from oic.utils.authn.user import UserAuthnMethod
 from oic.utils.http_util import Redirect
-from oic.utils.http_util import Unauthorized
 from idproxy.client.sp.util import SSO, ACS, Cache
 from Crypto import Random
 from saml2.s_utils import sid
+from dirg_util.http_util import Unauthorized
 
 #Log class for the SP.
 logger = logging.getLogger(__name__)
@@ -93,7 +93,7 @@ class SpHandler:
         #Handles the SAML authentication for an op server.
         self.authnmethod = SPAuthnMethodHandler(None, self.sp_conf.SPVERIFYBASE, self.authorization_url)
         #Handles SAML authentication for an IdP server.
-        # Setup performed by pyOpSamlProxy.provider.idp.handler.IdPHandler.
+        # Setup performed by pyOpSamlProxy.provider.idp.handler.handler.
         self.sp_authentication = None
         #Handles the user info response with Saml attributes.
         self.userinfo = UserInfoSpHandler(self.sp_conf.OPENID2SAMLMAP, self)
@@ -208,11 +208,15 @@ class SpHandler:
 
     def handle_response_to_op_handler(self, response, cookie, session):
         uid = self.handle_idp_response(response, cookie, session)
+        if uid is None:
+            return Unauthorized("You are not authorized!")
         session[SpHandler.SPHANDLERFORSUB] = uid
         return self.authnmethod.authn_redirect(uid, cookie)
 
     def handle_response_to_idp_handler(self, response, cookie, session, environ):
         uid = self.handle_idp_response(response, cookie, session)
+        if uid is None:
+            return Unauthorized("You are not authorized!")
         session[SpHandler.SPHANDLERFORUID] = uid
         return self.sp_authentication.authn_redirect(environ)
 
@@ -258,6 +262,15 @@ class SpHandler:
         :return: A correct response according to the op server. This is a redirect URL to the authorization endpoint.
         """
 
+        if self.sp_conf.VALID_ATTRIBUTE_RESPONSE is not None:
+            for k, v in self.sp_conf.VALID_ATTRIBUTE_RESPONSE.iteritems():
+                if k not in response.ava:
+                    return None
+                else:
+                    for attr_value in response.ava[k]:
+                        if v is not None and attr_value not in v:
+                            return None
+
         uid = response.assertion.subject.name_id.text
 
         if self.sp_conf.ANONYMIZE:
@@ -279,10 +292,121 @@ class SpHandler:
             sp_handler_cache = SpHandlerCache()
         sp_handler_cache.uid = uid
         sp_handler_cache.timeout = response.not_on_or_after
-        sp_handler_cache.attributes = response.ava
+        if self.sp_conf.ATTRIBUTE_WHITELIST is not None:
+            sp_handler_cache.attributes = {}
+            for attr in self.sp_conf.ATTRIBUTE_WHITELIST:
+                if attr in response.ava:
+                    sp_handler_cache.attributes[attr] = response.ava[attr]
+        else:
+            sp_handler_cache.attributes = response.ava
+
         sp_handler_cache.auth = True
         self.set_sp_handler_cache(uid, sp_handler_cache)
         return uid
+
+    def handle_acs(self, acs, session, environ, start_response, post):
+        if session[self.SPHANDLERVERIFYTYPE] == "OP":
+            if post:
+                acs = acs.post()
+            else:
+                acs = acs.redirect()
+            resp = self.handle_response_to_op_handler(acs, environ["HTTP_COOKIE"], session)
+        else:
+            if self.sp_conf.COPY_ASSERTION:
+                try:
+
+                    kwargs = {
+                        "outstanding_queries": session[self.SPHANDLERSSOCACHE].outstanding_queries,
+                        "allow_unsolicited": self.sp.allow_unsolicited,
+                        "want_assertions_signed": False,
+                        "want_response_signed": self.sp.want_response_signed,
+                        "return_addrs": self.sp.service_urls(),
+                        "entity_id": self.sp.config.entityid,
+                        "attribute_converters": self.sp.config.attribute_converters,
+                        "allow_unknown_attributes": self.sp.config.allow_unknown_attributes,
+                    }
+                    authn_response = AuthnResponse(self.sp.sec, **kwargs)
+
+                    _dict = HttpHandler.query_dictionary(environ)
+                    saml_response = _dict["SAMLResponse"]
+
+                    if isinstance(saml_response, list):
+                        saml_response = saml_response[0]
+                    xmlstr = self.sp.unravel(saml_response, BINDING_HTTP_POST, AuthnResponse.msgtype)
+
+                    authn_response.loads(xmlstr, False)
+
+                    namespace_dict = {}
+                    response_search = xmlstr.split(">")
+                    for item_resp in response_search:
+                        if item_resp.find(":Response") >= 0:
+                            str_split = item_resp.split(" ")
+                            for item in str_split:
+                                if item.find("xmlns:") >= 0:
+                                    try:
+                                        tmp_namespace = item.split("=")
+                                        namespace_dict[tmp_namespace[0].split(":")[1]] = \
+                                            (tmp_namespace[1], item)
+                                    except Exception:
+                                        pass
+                            break
+
+
+                    split_name = "EncryptedAssertion"
+                    if xmlstr.find(split_name) < 0:
+                        split_name = "Assertion"
+                    xmlstr_list = xmlstr.split(split_name)
+
+                    start_index = (xmlstr_list[0][::-1].find("<") + 1) * -1
+                    str_assertion = xmlstr_list[0][start_index:] + split_name + xmlstr_list[
+                        1] + split_name + ">"
+
+                    str_encrypted_assertion = None
+                    if split_name == "EncryptedAssertion":
+                        str_encrypted_assertion = str_assertion
+                        str_assertion = None
+
+                    """
+                    authn_response = authn_response.loads(xmlstr, False)
+                    assertion = authn_response.response.assertion[0]
+                    if len(authn_response.response.encrypted_assertion) == 1:
+                        assertion = authn_response.response.encrypted_assertion[0]
+
+                    str_assertion = str(assertion)
+                    """
+
+                    uid = hashlib.sha256(Random.new().read(24)).hexdigest()
+                    sp_handler_cache = self.get_sp_handler_cache(uid)
+                    if sp_handler_cache is None:
+                        sp_handler_cache = SpHandlerCache()
+                    sp_handler_cache.uid = uid
+                    sp_handler_cache.timeout = authn_response.not_on_or_after
+                    sp_handler_cache.attributes = {
+                        'eduPersonPrincipalName': [hashlib.sha256(Random.new().read(24)).hexdigest()]
+                    }
+                    sp_handler_cache.assertion = str_assertion
+                    sp_handler_cache.encrypted_assertion = str_encrypted_assertion
+                    sp_handler_cache.authnresponse = xmlstr
+                    sp_handler_cache.namespace_dict = namespace_dict
+
+                    sp_handler_cache.auth = True
+                    self.set_sp_handler_cache(uid, sp_handler_cache)
+
+                    session[SpHandler.SPHANDLERFORUID] = uid
+                    resp = self.sp_authentication.authn_redirect(environ)
+                    return resp(environ, start_response)
+                    #resp = self.sp._parse_response(_dict["SAMLResponse"], AuthnResponse,
+                    #   "assertion_consumer_service",BINDING_HTTP_POST, **kwargs)
+                except Exception, exc:
+                    logger.info("%s" % exc)
+                    raise
+            else:
+                if post:
+                    acs = acs.post()
+                else:
+                    acs = acs.redirect()
+                resp = self.handle_response_to_idp_handler(acs, environ["HTTP_COOKIE"], session, environ)
+        return resp(environ, start_response)
 
     def handle_sp_requests(self, environ, start_response, path, session):
         """
@@ -314,107 +438,14 @@ class SpHandler:
             if match is not None:
                 acs = ACS(self.sp, self.authnmethod, environ, start_response, self.logger,
                           session[self.SPHANDLERSSOCACHE])
-                if session[self.SPHANDLERVERIFYTYPE] == "OP":
-                    resp = self.handle_response_to_op_handler(acs.post(), environ["HTTP_COOKIE"], session)
-                else:
-                    if self.sp_conf.COPY_ASSERTION:
-                        try:
+                return self.handle_acs(acs, session, environ, start_response, post=True)
 
-                            kwargs = {
-                                "outstanding_queries": session[self.SPHANDLERSSOCACHE].outstanding_queries,
-                                "allow_unsolicited": self.sp.allow_unsolicited,
-                                "want_assertions_signed": False,
-                                "want_response_signed": self.sp.want_response_signed,
-                                "return_addrs": self.sp.service_urls(),
-                                "entity_id": self.sp.config.entityid,
-                                "attribute_converters": self.sp.config.attribute_converters,
-                                "allow_unknown_attributes": self.sp.config.allow_unknown_attributes,
-                            }
-                            authn_response = AuthnResponse(self.sp.sec, **kwargs)
-
-                            _dict = HttpHandler.query_dictionary(environ)
-                            saml_response = _dict["SAMLResponse"]
-
-                            if isinstance(saml_response, list):
-                                saml_response = saml_response[0]
-                            xmlstr = self.sp.unravel(saml_response, BINDING_HTTP_POST, AuthnResponse.msgtype)
-
-                            authn_response.loads(xmlstr, False)
-
-                            namespace_dict = {}
-                            response_search = xmlstr.split(">")
-                            for item_resp in response_search:
-                                if item_resp.find(":Response") >= 0:
-                                    str_split = item_resp.split(" ")
-                                    for item in str_split:
-                                        if item.find("xmlns:") >= 0:
-                                            try:
-                                                tmp_namespace = item.split("=")
-                                                namespace_dict[tmp_namespace[0].split(":")[1]] = \
-                                                    (tmp_namespace[1], item)
-                                            except Exception:
-                                                pass
-                                    break
-
-
-                            split_name = "EncryptedAssertion"
-                            if xmlstr.find(split_name) < 0:
-                                split_name = "Assertion"
-                            xmlstr_list = xmlstr.split(split_name)
-
-                            start_index = (xmlstr_list[0][::-1].find("<") + 1) * -1
-                            str_assertion = xmlstr_list[0][start_index:] + split_name + xmlstr_list[
-                                1] + split_name + ">"
-
-                            str_encrypted_assertion = None
-                            if split_name == "EncryptedAssertion":
-                                str_encrypted_assertion = str_assertion
-                                str_assertion = None
-
-                            """
-                            authn_response = authn_response.loads(xmlstr, False)
-                            assertion = authn_response.response.assertion[0]
-                            if len(authn_response.response.encrypted_assertion) == 1:
-                                assertion = authn_response.response.encrypted_assertion[0]
-
-                            str_assertion = str(assertion)
-                            """
-
-                            uid = hashlib.sha256(Random.new().read(24)).hexdigest()
-                            sp_handler_cache = self.get_sp_handler_cache(uid)
-                            if sp_handler_cache is None:
-                                sp_handler_cache = SpHandlerCache()
-                            sp_handler_cache.uid = uid
-                            sp_handler_cache.timeout = authn_response.not_on_or_after
-                            sp_handler_cache.attributes = {
-                                'eduPersonPrincipalName': [hashlib.sha256(Random.new().read(24)).hexdigest()]
-                            }
-                            sp_handler_cache.assertion = str_assertion
-                            sp_handler_cache.encrypted_assertion = str_encrypted_assertion
-                            sp_handler_cache.authnresponse = xmlstr
-                            sp_handler_cache.namespace_dict = namespace_dict
-
-                            sp_handler_cache.auth = True
-                            self.set_sp_handler_cache(uid, sp_handler_cache)
-
-                            session[SpHandler.SPHANDLERFORUID] = uid
-                            resp = self.sp_authentication.authn_redirect(environ)
-                            return resp(environ, start_response)
-                            #resp = self.sp._parse_response(_dict["SAMLResponse"], AuthnResponse,
-                            #   "assertion_consumer_service",BINDING_HTTP_POST, **kwargs)
-                        except Exception, exc:
-                            logger.info("%s" % exc)
-                            raise
-                    else:
-                        resp = self.handle_response_to_idp_handler(acs.post(), environ["HTTP_COOKIE"], session, environ)
-                return resp(environ, start_response)
         for regex in self.sp_conf.ASCVERIFYREDIRECTLIST:
             match = re.search(regex, path)
             if match is not None:
                 acs = ACS(self.sp, self.authnmethod, environ, start_response, self.logger,
                           session[self.SPHANDLERSSOCACHE])
-                resp = self.handle_idp_response(acs.redirect(), environ["HTTP_COOKIE"], session)
-                return resp(environ, start_response)
+                return self.handle_acs(acs, session, environ, start_response, post=False)
 
 
 #This class handles user authentication with SAML for the op server.

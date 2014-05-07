@@ -65,7 +65,7 @@ class Service(object):
                 _relay_state = _dict["RelayState"]
             except KeyError:
                 _relay_state = ""
-            _encrypt_cert =  None
+            _encrypt_cert = None
             try:
                 _encrypt_cert = encrypt_cert_from_item(_dict["req_info"].message)
             except:
