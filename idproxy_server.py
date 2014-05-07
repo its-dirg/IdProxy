@@ -69,7 +69,7 @@ def application(environ, start_response):
             response = http_helper.http404()
 
         http_helper.log_response(response)
-        #Catch all unauthorized attemps, log them and present a better web page.
+        #Catch all unauthorized attemps and present a better web page.
         if start_response.status[0:3] == "401":
             mte = LOOKUP.get_template("unauthorized.mako")
             message = None
