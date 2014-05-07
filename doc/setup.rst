@@ -452,6 +452,30 @@ Here follows some parameters that are good to know for the proxy.
 
         "want_response_signed": "true",
 
+VALID_ATTRIBUTE_RESPONSE
+""""""""""""""""""""""""
+A dictionary that contains SAML response attributes that must be returned from the IdP for the user to be authenticated.
+The value for the key should be None if all values are allowed, or a list of strings containing the approved values to be
+returned. Set VALID_ATTRIBUTE_RESPONSE to None if it should not be used.
+
+Example::
+
+    VALID_ATTRIBUTE_RESPONSE = {
+        "eduPersonAffiliation": ["student"]
+    }
+
+ATTRIBUTE_WHITELIST
+"""""""""""""""""""
+A list of all the SAML attributes that may be returned by the proxy front end.
+Set VALID_ATTRIBUTE_RESPONSE to None if all attributes from the underlying IdP should be returned.
+
+Example::
+
+    #Contains all attributes that will be returned.
+    ATTRIBUTE_WHITELIST = [
+        "eduPersonScopedAffiliation"
+    ]
+
 op_conf.example
 ^^^^^^^^^^^^^^^^
 

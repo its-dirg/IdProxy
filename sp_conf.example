@@ -139,3 +139,9 @@ CONFIG = {
     "metadata": {"local": ["[..]/idp.xml"]},
     "name_form": NAME_FORMAT_URI,
 }
+
+#Contains all valid attributes and valid values for that attribute.
+VALID_ATTRIBUTE_RESPONSE = None
+
+#Contains all attributes that will be returned.
+ATTRIBUTE_WHITELIST = None
