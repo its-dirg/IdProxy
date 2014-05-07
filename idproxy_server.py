@@ -26,6 +26,18 @@ LOOKUP = TemplateLookup(directories=['mako/templates', "/opt/dirg/dirg-util/mako
                         input_encoding='utf-8',
                         output_encoding='utf-8')
 
+class start_response_intercept(object):
+
+    def __init__(self, start_response):
+        self.start_response = start_response
+
+    def __call__(self, status, response_headers, exc_info=None):
+        self.status = status
+        self.response_headers = response_headers
+        self.exc_info = exc_info
+        self.start_response(status, response_headers, exc_info=None)
+
+
 
 def application(environ, start_response):
     """
@@ -35,6 +47,7 @@ def application(environ, start_response):
     :return: Depends on the request. Always a WSGI response where start_response first have to be initialized.
     """
     try:
+        start_response = start_response_intercept(start_response)
         session = Session(environ)
 
         http_helper = HttpHandler(environ, start_response, session, logger)
@@ -56,6 +69,18 @@ def application(environ, start_response):
             response = http_helper.http404()
 
         http_helper.log_response(response)
+        #Catch all unauthorized attemps, log them and present a better web page.
+        if start_response.status[0:3] == "401":
+            mte = LOOKUP.get_template("unauthorized.mako")
+            message = None
+            if len(response) == 1:
+                message = str(response[0])
+            if message is None or len(message.strip()) == 0:
+                message = "You are not authorized!"
+            argv = {
+                "message": message,
+            }
+            return [mte.render(**argv)]
         return response
     except Exception, excp:
         urn = uuid4().urn
