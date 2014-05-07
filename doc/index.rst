@@ -17,6 +17,7 @@ IdProxy is at experimental stage.
    install
    setup
    run
+   examples
 
 .. toctree::
     :maxdepth: 1
