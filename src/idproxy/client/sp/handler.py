@@ -267,9 +267,13 @@ class SpHandler:
                 if k not in response.ava:
                     return None
                 else:
-                    for attr_value in response.ava[k]:
-                        if v is not None and attr_value not in v:
-                            return None
+                    allowed = False
+                    for allowed_attr_value in v:
+                        if allowed_attr_value == response.ava[k] or allowed_attr_value in response.ava[k]:
+                            allowed = True
+                            break
+                    if not allowed:
+                        return None
 
         uid = response.assertion.subject.name_id.text
 
@@ -294,9 +298,18 @@ class SpHandler:
         sp_handler_cache.timeout = response.not_on_or_after
         if self.sp_conf.ATTRIBUTE_WHITELIST is not None:
             sp_handler_cache.attributes = {}
-            for attr in self.sp_conf.ATTRIBUTE_WHITELIST:
+            for attr, allowed in self.sp_conf.ATTRIBUTE_WHITELIST.iteritems():
                 if attr in response.ava:
-                    sp_handler_cache.attributes[attr] = response.ava[attr]
+                    if allowed is not None:
+                        tmp_attr_list = []
+                        for tmp_value in response.ava[attr]:
+                            for allowed_str in allowed:
+                                if allowed_str in tmp_value:
+                                    tmp_attr_list.append(tmp_value)
+                        if len(tmp_attr_list) > 0:
+                            sp_handler_cache.attributes[attr] = tmp_attr_list
+                    else:
+                        sp_handler_cache.attributes[attr] = response.ava[attr]
         else:
             sp_handler_cache.attributes = response.ava
 

@@ -176,7 +176,7 @@ class SSO(Service):
             try:
                 sign_assertion = self.idphandler.idp_server.config.getattr("sign_assertion", "idp")
                 sign_response = self.idphandler.idp_server.config.getattr("sign_response", "idp")
-                encrypt_assertion = self.idphandler.idp_server.config.getattr("sign_response", "idp")
+                encrypt_assertion = self.idphandler.idp_server.config.getattr("encrypt_assertion", "idp")
                 if sign_assertion is None:
                     sign_assertion = False
                 if override_sign_assertion is not None:
@@ -195,51 +195,52 @@ class SSO(Service):
                     encrypt_cert=encrypt_cert,
                     encrypt_assertion=encrypt_assertion,
                     **resp_args)
-                if self.idphandler.idp_server.config.getattr("sign_response", "idp"):
-                    if _resp.signature is None:
-                        _resp.signature = pre_signature_part(_resp.id, self.idphandler.idp_server.sec.my_cert, 1)
-                _class_sign = class_name(_resp)
-                _node_id_sign = _resp.id
-                if assertion is not None or encrypted_assertion is not None:
-                    split_name = "Assertion"
-                    if encrypted_assertion is not None:
-                        split_name = "EncryptedAssertion"
-                        assertion = encrypted_assertion
-                    tmp_namespace_list = {}
-                    for k, v in namespace_list.iteritems():
-                        tmp_namespace_list[k] = v[0]
-                    #_resp.c_ns_prefix = tmp_namespace_list
-                    xml_str = str(_resp)
-
-                    replace_dict = {}
-                    response_search = xml_str.split(">")
-                    for item_resp in response_search:
-                        if item_resp.find(":Response") >= 0:
-                            namespace_search = item_resp.split(" ")
-                            for item in namespace_search:
-                                if item.find("xmlns:") >= 0:
-                                    try:
-                                        tmp_namespace = item.split("=")
-                                        for key, value in namespace_list.iteritems():
-                                            if value[0] == tmp_namespace[1]:
-                                                if item not in replace_dict:
-                                                    replace_dict[item] = value[1]
-                                    except Exception:
-                                        pass
-                            break
-                    for k, v in replace_dict.iteritems():
-                        xml_str = xml_str.replace(k, v)
-
-                    xml_str_list = xml_str.split("Assertion")
-
-                    start_index = (xml_str_list[0][::-1].find("<")) * -1
-                    _resp = xml_str_list[0][:(start_index - 1)] + assertion + xml_str_list[2][1:]
-                    #name1 = assertion[assertion.find('<') + 1:assertion.find(':')]
-                    #name2 = xml_str_list[0][len(xml_str_list[0]) + start_index:-1]
-                    #_resp.replace(name2, name1)
-
+                if not isinstance(_resp, str):
                     if self.idphandler.idp_server.config.getattr("sign_response", "idp"):
-                        _resp = self.idphandler.idp_server.sec.sign_statement(_resp, _class_sign, node_id=_node_id_sign)
+                        if _resp.signature is None:
+                            _resp.signature = pre_signature_part(_resp.id, self.idphandler.idp_server.sec.my_cert, 1)
+                    _class_sign = class_name(_resp)
+                    _node_id_sign = _resp.id
+                    if assertion is not None or encrypted_assertion is not None:
+                        split_name = "Assertion"
+                        if encrypted_assertion is not None:
+                            split_name = "EncryptedAssertion"
+                            assertion = encrypted_assertion
+                        tmp_namespace_list = {}
+                        for k, v in namespace_list.iteritems():
+                            tmp_namespace_list[k] = v[0]
+                        #_resp.c_ns_prefix = tmp_namespace_list
+                        xml_str = str(_resp)
+
+                        replace_dict = {}
+                        response_search = xml_str.split(">")
+                        for item_resp in response_search:
+                            if item_resp.find(":Response") >= 0:
+                                namespace_search = item_resp.split(" ")
+                                for item in namespace_search:
+                                    if item.find("xmlns:") >= 0:
+                                        try:
+                                            tmp_namespace = item.split("=")
+                                            for key, value in namespace_list.iteritems():
+                                                if value[0] == tmp_namespace[1]:
+                                                    if item not in replace_dict:
+                                                        replace_dict[item] = value[1]
+                                        except Exception:
+                                            pass
+                                break
+                        for k, v in replace_dict.iteritems():
+                            xml_str = xml_str.replace(k, v)
+
+                        xml_str_list = xml_str.split("Assertion")
+
+                        start_index = (xml_str_list[0][::-1].find("<")) * -1
+                        _resp = xml_str_list[0][:(start_index - 1)] + assertion + xml_str_list[2][1:]
+                        #name1 = assertion[assertion.find('<') + 1:assertion.find(':')]
+                        #name2 = xml_str_list[0][len(xml_str_list[0]) + start_index:-1]
+                        #_resp.replace(name2, name1)
+
+                        if self.idphandler.idp_server.config.getattr("sign_response", "idp"):
+                            _resp = self.idphandler.idp_server.sec.sign_statement(_resp, _class_sign, node_id=_node_id_sign)
             except Exception, excp:
                 logging.error(exception_trace(excp))
                 raise excp
