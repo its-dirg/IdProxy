@@ -18,6 +18,7 @@ class SpAuthentication(IdPAuthentication):
     def __init__(self, idphandler, sphandler):
         IdPAuthentication.__init__(self, idphandler)
         self.sphandler = sphandler
+        self._user_info = None
 
     def sp_auth_cookie(self, environ):
         cookie_load = self.idphandler.retrieve_cookie(environ, self.SPAUTHENTICATIONCOOKIE)
@@ -96,11 +97,16 @@ class SpAuthentication(IdPAuthentication):
             resp = self.setup_idp(user, query["authn_reference"], query["redirect_uri"], query["key"])
         return resp(environ, start_response)
 
+    def user_info(self, user_info):
+        self._user_info = user_info
+
     def information(self, environ, start_response, uid):
-        session = Session(environ)
-        user = session[SpHandler.SPHANDLERFORUID]
-        sp_handler_cache = self.sphandler.get_sp_handler_cache(user)
-        return sp_handler_cache.attributes
+        if self._user_info is None:
+            session = Session(environ)
+            user = session[SpHandler.SPHANDLERFORUID]
+            sp_handler_cache = self.sphandler.get_sp_handler_cache(user)
+            return sp_handler_cache.attributes
+        return self._user_info.information(environ, start_response, uid)
 
     def sp_handler_cache(self, environ, start_response, uid):
         session = Session(environ)
@@ -109,4 +115,6 @@ class SpAuthentication(IdPAuthentication):
         return sp_handler_cache\
 
     def extra(self, environ, start_response, uid):
-        return {}
+        if self._user_info is None:
+            return {}
+        return self._user_info.extra(environ, start_response, uid)

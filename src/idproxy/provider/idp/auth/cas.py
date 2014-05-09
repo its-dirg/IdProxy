@@ -14,20 +14,24 @@ logger = logging.getLogger("pyOpSamlProxy.provider.idp.util")
 
 
 class CasAuth(IdPAuthentication):
-    def __init__(self, idphandler, cas_server, service_url, user_info, extra_info=None, extra_validation=None):
+    def __init__(self, idphandler, cas_server, service_url, extra_validation=None):
         IdPAuthentication.__init__(self, idphandler)
-        self.user_info = user_info
-        self.extra_info = extra_info
+        self._user_info = None
         self.auth_helper = CasAuthentication(cas_server, service_url, extra_validation,
                                              cookie_dict=None, cookie_object=idphandler.idp_server)
 
+    def user_info(self, user_info):
+        self._user_info = user_info
+
     def information(self, environ, start_response, uid):
-        return self.user_info[uid].copy()
+        if self._user_info is None:
+            return None
+        return self._user_info.information(environ, start_response, uid)
 
     def extra(self, environ, start_response, uid):
-        if self.extra_info is not None:
-            return self.extra_info[uid].copy()
-        return None
+        if self._user_info is None:
+            return None
+        return self._user_info.extra(environ, start_response, uid)
 
     def authenticate(self, environ, start_response, reference, key, redirect_uri, **kwargs):
         logger.info("The login page")

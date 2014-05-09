@@ -144,4 +144,5 @@ CONFIG = {
 VALID_ATTRIBUTE_RESPONSE = None
 
 #Contains all attributes that will be returned.
+#Only value that contains the values in the value list will be returned. If None will all values be returned.
 ATTRIBUTE_WHITELIST = None

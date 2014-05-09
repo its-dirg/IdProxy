@@ -10,11 +10,10 @@ logger = logging.getLogger("pyOpSamlProxy.provider.idp.util")
 
 
 class PasswordYubikeyAuth(IdPAuthentication):
-    def __init__(self, idphandler, passwd, user_info, extra_info, password=True, yubikey=False):
+    def __init__(self, idphandler, passwd, password=True, yubikey=False):
         IdPAuthentication.__init__(self, idphandler)
         self.passwd = passwd
-        self.user_info = user_info
-        self.extra_info = extra_info
+        self._user_info = None
         yubikey_db = None
         yubikey_server = None
         yubikey_otp_parameter = None
@@ -35,11 +34,18 @@ class PasswordYubikeyAuth(IdPAuthentication):
                                                            passwd, password_parameter, yubikey_db, yubikey_server,
                                                            yubikey_otp_parameter)
 
+    def user_info(self, user_info):
+        self._user_info = user_info
+
     def information(self, environ, start_response, uid):
-        return self.user_info[uid].copy()
+        if self._user_info is None:
+            return None
+        return self._user_info.information(environ, start_response, uid)
 
     def extra(self, environ, start_response, uid):
-        return self.extra_info[uid].copy()
+        if self._user_info is None:
+            return None
+        return self._user_info.extra(environ, start_response, uid)
 
     def authenticate(self, environ, start_response, reference, key, redirect_uri, **kwargs):
         logger.info("The login page")

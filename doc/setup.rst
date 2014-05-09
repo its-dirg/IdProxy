@@ -202,8 +202,12 @@ This parameter describes how the proxy will authorize users. The proxy can autho
 password or with a chain of authentications. The authorization object is a dictionary where the key defines the
 authorization method. Each key points at a dictionary that defines the SAML authentication class to be associated
 with the method, weight, base url for the response and where user information can be collected.
-At this point **USER_INFO** is not fully supported by the IdP solution. You can only fetch the information from the
-backend IdP or from the USER dictionary in the configuration file. The USER_INFO SAML can only be used for the SAML key.
+**USER_INFO** defines how the user information will be collected. The value for USER_INFO must be an instance of the
+class DictionaryInformation, an the instance of a the class that implements the same methods or None. Right now is None
+only supported by the SAML ACR value. In that case a SAML authentication is used, and the USER_INFO is none the proxy
+will forward the information from the underlying IdP. For an example how to use a LDAP or simple dictionary for
+collection user information, view the idp_conf.example file.
+
 **URL** should always be `BASE`. **WEIGHT** will order the diffrent authorization methods with the same value of ACR.
 This is not fully tested and therefore is it recommended to only use one value for each ACR value.
 
@@ -466,15 +470,16 @@ Example::
 
 ATTRIBUTE_WHITELIST
 """""""""""""""""""
-A list of all the SAML attributes that may be returned by the proxy front end.
+A dictionary where the keys are all the SAML attributes that may be returned by the proxy front end. The value for
+the key represents what a attibute value must contain to be valid. If the key value is none all attribute values are
+valid.
 Set VALID_ATTRIBUTE_RESPONSE to None if all attributes from the underlying IdP should be returned.
 
 Example::
 
-    #Contains all attributes that will be returned.
-    ATTRIBUTE_WHITELIST = [
-        "eduPersonScopedAffiliation"
-    ]
+    ATTRIBUTE_WHITELIST = {
+        "eduPersonScopedAffiliation": ["student"]
+    }
 
 op_conf.example
 ^^^^^^^^^^^^^^^^

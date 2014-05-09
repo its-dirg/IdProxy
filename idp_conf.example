@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import os
+from idproxy.provider.idp.userinfo import DictionaryInformation
 import server_conf
-from dirg_util.dict import Sqllite3Dict
+from dirg_util.dict import Sqllite3Dict, LDAPDict
 from saml2.authn_context import authn_context_class_ref, UNSPECIFIED, PASSWORD
 from saml2 import BINDING_HTTP_REDIRECT, BINDING_URI
 from saml2 import BINDING_HTTP_ARTIFACT
@@ -59,42 +60,55 @@ CACHE_2 = {}
 #The cache as a sqlite database.
 #CACHE_2 = Sqllite3Dict(WORKING_DIR + "idp_cache2.sqlite3")
 
-#How the IdP server should authenticate the users.
-#SAML => This will authenticate a user at antoher IdP. With other words, the proxy part.
-#MULTIPLEAUTHN => Here you can specify multiple authentication methods. The user will have to authenticate with
-#                 all the methods in the given order.
-AUTHORIZATION = {
-    #"SAML": {"ACR": authn_context_class_ref(UNSPECIFIED), "WEIGHT": 3, "URL": BASE, "USER_INFO": "SAML"},
-    #"CAS": {"ACR": authn_context_class_ref(UNSPECIFIED), "WEIGHT": 2, "URL": BASE, "USER_INFO": "LDAP"},
-    #"YUBIKEY": {"ACR": authn_context_class_ref(UNSPECIFIED), "WEIGHT": 1, "URL": BASE, "USER_INFO": "SIMPLE"},
-     "PASSWORD": {"ACR": authn_context_class_ref(PASSWORD), "WEIGHT": 1, "URL": BASE, "USER_INFO": "SIMPLE"},
-    #"PASSWORD_YUBIKEY": {"ACR": authn_context_class_ref(UNSPECIFIED), "WEIGHT": 0, "URL": BASE, "USER_INFO": "SIMPLE"},
-    #"MULTIPLEAUTHN": {
-    #    "ACR": authn_context_class_ref(UNSPECIFIED),
-    #    "WEIGHT": 4,
-    #    "URL": BASE,
-    #    "USER_INFO": "SAML",
-    #    "AUTHNLIST": [
-    #        {"ACR": "PASSWORD_YUBIKEY"},
-    #        {"ACR": "CAS"},
-    #        {"ACR": "SAML"}
-    #    ]
-    #
-    #}
+#You do not need this map, but it shows an example how the user information can be collected.
+#If you get different user identifications from an underlying service, like an IdP or CAS, then you have in your
+#LDAP you can map the users between the services. The mapping dictionary must be a readonly dictionary, but can
+#have any type of underlying implementation, like the Sqllite3Dict.
+user_id_map_for_idp = {
+    "myserviceuser": "myldapuser"
 }
 
-#True if you want to copy the certificate from the calling SP and add it to the call to the underlying SAML IdP.
-#The authn request cannot be signed if this value is true!!!!
-#Only useful if SAML authorization is activated.
-COPYSPCERT = False
+#Defines the settings for a LDAP dictionary contained in the project dirg_util.
+#This is just an example for how you can connect LDAP as backend and nothing that is maintained in the IdProxy project.
+ldap_settings = {
+    "ldapuri": "ldaps://myldap.url.com",
+    "base": "dc=org, dc=domain",
+    "filter_pattern": "(uid=%s)",
+    "user": "",
+    "passwd": "",
+    "attr": [
+        "eduPersonScopedAffiliation",
+        "eduPersonAffiliation",
+        "eduPersonPrincipalName",
+        "givenName",
+        "sn",
+        "mail",
+        "uid",
+        "o",
+        "c",
+        "labeledURI",
+        "ou",
+        "displayName",
+        "norEduPersonLIN"
+    ],
+    "keymap": {
+        "mail": "email",
+        "labeledURI": "labeledURL",
+    },
+    "static_values": {
+        "eduPersonTargetedID": "one!for!all",
+    },
+    "exact_match": True,
+    "firstonly_len1": True,
+    "timeout": 15,
+}
+#LDAP readonly dictionary that can be used to collect information about a user.
+LDAP = DictionaryInformation(LDAPDict(**ldap_settings), None, user_id_map_for_idp)
 
-#True if you want to copy the encryption certificate from the calling SP and add it to the call to the underlying SAML
-# IdP. Only useful if SAML authorization is activated.
-COPYSPKEY = False
 
 #User database as a dictionary. You can offcourse use a database instead, but you must use the same interface
 #as the dictionary below.
-USERS = {
+USERS_DICT = {
     "test2": {
         "sn": "Testsson",
         "givenName": "Test2",
@@ -130,13 +144,47 @@ USERS = {
         "norEduPersonNIN": "SE197001012222"
     },
 }
-EXTRA = {
+EXTRA_DICT = {
     "test1": {
         "eduPersonEntitlement": "urn:mace:swamid.se:foo:bar",
         "schacGender": "male",
         "schacUserPresenceID": "skype:test.test"
     }
 }
+SIMPLE = DictionaryInformation(USERS_DICT, EXTRA_DICT, user_id_map_for_idp)
+
+#How the IdP server should authenticate the users.
+#SAML => This will authenticate a user at antoher IdP. With other words, the proxy part.
+#MULTIPLEAUTHN => Here you can specify multiple authentication methods. The user will have to authenticate with
+#                 all the methods in the given order.
+AUTHORIZATION = {
+    #"SAML": {"ACR": authn_context_class_ref(UNSPECIFIED), "WEIGHT": 3, "URL": BASE, "USER_INFO": None},
+    #"CAS": {"ACR": authn_context_class_ref(UNSPECIFIED), "WEIGHT": 2, "URL": BASE, "USER_INFO": LDAP},
+    #"YUBIKEY": {"ACR": authn_context_class_ref(UNSPECIFIED), "WEIGHT": 1, "URL": BASE, "USER_INFO": SIMPLE},
+     "PASSWORD": {"ACR": authn_context_class_ref(PASSWORD), "WEIGHT": 1, "URL": BASE, "USER_INFO": SIMPLE},
+    #"PASSWORD_YUBIKEY": {"ACR": authn_context_class_ref(UNSPECIFIED), "WEIGHT": 0, "URL": BASE, "USER_INFO": SIMPLE},
+    #"MULTIPLEAUTHN": {
+    #    "ACR": authn_context_class_ref(UNSPECIFIED),
+    #    "WEIGHT": 4,
+    #    "URL": BASE,
+    #    "USER_INFO": None,
+    #    "AUTHNLIST": [
+    #        {"ACR": "PASSWORD_YUBIKEY"},
+    #        {"ACR": "CAS"},
+    #        {"ACR": "SAML"}
+    #    ]
+    #
+    #}
+}
+
+#True if you want to copy the certificate from the calling SP and add it to the call to the underlying SAML IdP.
+#The authn request cannot be signed if this value is true!!!!
+#Only useful if SAML authorization is activated.
+COPYSPCERT = False
+
+#True if you want to copy the encryption certificate from the calling SP and add it to the call to the underlying SAML
+# IdP. Only useful if SAML authorization is activated.
+COPYSPKEY = False
 
 #User/name passwords for password login in the application. It is possible to use a database if you keep the interface.
 PASSWD = {

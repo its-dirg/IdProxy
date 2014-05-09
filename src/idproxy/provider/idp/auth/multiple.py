@@ -14,10 +14,11 @@ class MultipleAuthentication(IdPAuthentication):
     MULTIPLEAUTHENTICATIONREDIRECT = "MULTIPLEAUTHENTICATIONREDIRECT"
     MUTLIPLEAUTHENTICATIONCOUNTER = "MUTLIPLEAUTHENTICATIONCOUNTER"
 
-    def __init__(self, idphandler, auth_list):
+    def __init__(self, idphandler, auth_list, user_info=None):
         IdPAuthentication.__init__(self, idphandler)
         self.auth_list = auth_list
         self.auth_list_lengt = len(auth_list)
+        self._user_info = user_info
 
     def authenticate(self, environ, start_response, reference, key, redirect_uri, **kwargs):
         session = Session(environ)
@@ -83,9 +84,19 @@ class MultipleAuthentication(IdPAuthentication):
         #Or even setup the endpoints as some kind of key.
         session = Session(environ)
         if self.MUTLIPLEAUTHENTICATIONCOUNTER in session:
-            authn_method = session[self.MUTLIPLEAUTHENTICATIONCOUNTER]
-            return self.auth_list[authn_method].information(environ, start_response, uid)
+            if self._user_info is None:
+                authn_method = session[self.MUTLIPLEAUTHENTICATIONCOUNTER]
+                return self.auth_list[authn_method].information(environ, start_response, uid)
+            else:
+                return self._user_info.information(environ, start_response, uid)
         return {}
 
     def extra(self, environ, start_response, uid):
+        session = Session(environ)
+        if self.MUTLIPLEAUTHENTICATIONCOUNTER in session:
+            if self._user_info is None:
+                authn_method = session[self.MUTLIPLEAUTHENTICATIONCOUNTER]
+                return self.auth_list[authn_method].extra(environ, start_response, uid)
+            else:
+                return self._user_info.extra(environ, start_response, uid)
         return {}
