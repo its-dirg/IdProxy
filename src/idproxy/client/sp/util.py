@@ -151,6 +151,10 @@ class SSO(object):
                 self.logger.debug("No IdP entity ID in query: %s" % query)
                 pass
 
+        if len(idps) == 1:
+            # idps is a dictionary
+            idp_entity_id = idps.keys()[0]
+
         if not idp_entity_id:
 
             if self.wayf:
@@ -178,9 +182,6 @@ class SSO(object):
                     loc = _cli.create_discovery_service_request(
                         self.discosrv, eid, **{"return": ret})
                     return -1, SeeOther(loc)
-            elif len(idps) == 1:
-                # idps is a dictionary
-                idp_entity_id = idps.keys()[0]
             elif not len(idps):
                 raise ServiceErrorException('Misconfiguration')
             else:

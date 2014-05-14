@@ -192,6 +192,8 @@ class SpHandler:
         :param path: The requested path.
         :return: True if this class should handle this request, otherwise false.
         """
+        if path == self.sp_conf.DISCOENDPOINT:
+            return True
         if path == "sp_metadata":
             return True
         if re.search(self.sp_conf.SPVERIFYBASE, path):
@@ -438,11 +440,13 @@ class SpHandler:
 
         if self.SPHANDLERSSOCACHE not in session or session[self.SPHANDLERSSOCACHE] is None:
             session[self.SPHANDLERSSOCACHE] = Cache()
-        if re.search(self.sp_conf.SPVERIFYBASE, path) or re.search(self.sp_conf.SPVERIFYBASEIDP, path):
-            if self.sp_conf.SPVERIFYBASE == path:
-                session[self.SPHANDLERVERIFYTYPE] = "OP"
-            else:
-                session[self.SPHANDLERVERIFYTYPE] = "IDP"
+        if re.search(self.sp_conf.SPVERIFYBASE, path) or re.search(self.sp_conf.SPVERIFYBASEIDP, path) or \
+                re.search(self.sp_conf.DISCOENDPOINT, path):
+            if path != self.sp_conf.DISCOENDPOINT:
+                if self.sp_conf.SPVERIFYBASE == path:
+                    session[self.SPHANDLERVERIFYTYPE] = "OP"
+                else:
+                    session[self.SPHANDLERVERIFYTYPE] = "IDP"
             _sso = SSO(self.sp, environ, start_response, self.logger, session[self.SPHANDLERSSOCACHE], **self.args)
             return _sso.do(self.sp_authentication.sp_certificate(environ),
                            self.sp_authentication.sp_encrypt_certificate(environ))
