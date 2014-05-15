@@ -37,6 +37,9 @@ BASEURL = server_conf.BASEURL
 ISSUER = "%s:%s" % (BASEURL, PORT)
 BASE = ISSUER
 
+#Discovery endpoint
+DISCOENDPOINT = "disco"
+
 #The base url for the SP at the server.
 SPVERIFYBASE = "spverify"
 
@@ -130,6 +133,9 @@ CONFIG = {
                     (BASE + "/" + ASCPOST, BINDING_HTTP_POST)
                 ],
                 "required_attributes": ["uid"],
+                "discovery_response": [
+                    ("%s/%s" % (BASE, DISCOENDPOINT), BINDING_DISCO)
+                ],
             }
         },
     },

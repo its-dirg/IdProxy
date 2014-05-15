@@ -364,6 +364,11 @@ BASE
 """"
 Full URL to the server including port.
 
+DISCOENDPOINT
+"""""""""""""
+This is the url where the Service Provider expects to get the response from the discovery server.
+There is no need to change this value.
+
 SPVERIFYBASE
 """"""""""""
 The base url for the SP at the server.
