@@ -1,6 +1,8 @@
 import hashlib
 import importlib
 import datetime
+from auth.base import Authenticate
+from auth.pyoidc.user import _UserAuthnMethod
 
 from dirg_util.http_util import HttpHandler
 from saml2 import BINDING_HTTP_POST
@@ -15,7 +17,6 @@ import base64
 import time
 import re
 from saml2.client import Saml2Client
-from oic.utils.authn.user import UserAuthnMethod
 from oic.utils.http_util import Redirect
 from idproxy.client.sp.util import SSO, ACS, Cache
 from Crypto import Random
@@ -468,7 +469,7 @@ class SpHandler:
 #This class handles user authentication with SAML for the op server.
 #This is the standard way to add authentication modules to the provider (oic.oic.provider.Provider)
 # in the project pyoidc.
-class SPAuthnMethodHandler(UserAuthnMethod):
+class SPAuthnMethodHandler(_UserAuthnMethod):
     #Parameter name for queries to be sent back on the URL, after successful authentication.
     CONST_QUERY = "query"
     #The name for the SP cookie, containing the query parameters for the clients authentication request.
@@ -483,9 +484,10 @@ class SPAuthnMethodHandler(UserAuthnMethod):
         :param return_to: The URL to return to after a successful authentication. Generally the OP servers
                           authorization endpoint.
         """
-        UserAuthnMethod.__init__(self, srv)
+        _UserAuthnMethod.__init__(self, srv)
         self.redirect_url = redirect_url
         self.return_to = return_to
+        self.acr = None
 
     def authn_redirect(self, uid, cookie):
         """
@@ -515,6 +517,8 @@ class SPAuthnMethodHandler(UserAuthnMethod):
         :param kwargs: Not used.
         :return:
         """
+        if self.acr is not None and query is not None and query.find(Authenticate.CONST_ACR) == -1:
+            query += "&" + Authenticate.CONST_ACR + "=" + self.acr
         cookie = self.create_cookie('{"' + self.CONST_QUERY + '": "' + base64.b64encode(query) + '"}',
                                     self.CONST_SP_COOKIE, self.CONST_SP_COOKIE)
         return Redirect(self.redirect_url, headers=[cookie])

@@ -1,3 +1,5 @@
+from auth.pyoidc.user import UsernamePasswordMako
+from auth.pyoidc.user_cas import CasAuthnMethod
 from idproxy import ServiceErrorException
 
 __author__ = 'haho0032'
@@ -12,7 +14,6 @@ from urlparse import parse_qs
 from oic.utils import http_util
 from oic.utils.http_util import wsgi_wrapper
 from oic.utils.sdb import SessionDB
-from oic.utils.authn.user import UsernamePasswordMako
 from oic.utils.authn.client import verify_client
 from oic.utils.authn.authn_context import AuthnBroker
 from oic.utils.authz import AuthzHandling
@@ -25,7 +26,6 @@ from oic.oic.provider import EndSessionEndpoint
 from oic.utils.keyio import KeyBundle, dump_jwks
 from oic.utils.webfinger import WebFinger, OIC_ISSUER
 from oic.utils.userinfo import UserInfo
-from oic.utils.authn.user_cas import CasAuthnMethod
 from oic.utils.authn.ldap_member import UserLDAPMemberValidation
 from dirg_util.http_util import HttpHandler
 
@@ -273,7 +273,7 @@ class OpHandler:
             for auth, value in authorization.items():
                 acr = value[OpHandler.AUTHORIZATION_ACR]
                 user_info = value[OpHandler.AUTHORIZATION_USER_INFO]
-                user_info_auth_map[acr] = self.get_user_info(user_info, ldap, userdb, sphandler)
+                user_info_auth_map[auth] = self.get_user_info(user_info, ldap, userdb, sphandler)
             provider.userinfo = UserInfoAuthHandler(self, user_info_auth_map)
             return provider
         except:
@@ -409,7 +409,7 @@ class OpHandler:
                         yubikey_db
                     )
                     authn_list.append(tmpauthn)
-                authn = MultipleAuthHandler(authn_list)
+                authn = MultipleAuthHandler(authn_list, authkey)
             else:
                 authn = self.get_authn(authkey,
                                        ldap_config,
@@ -493,24 +493,25 @@ class OpHandler:
         """
         #authorization_page_yubikey,
         #authorization_page_password_yubikey,
-        #yubikey_server,
+        #yubikey_server,gfhdsgfhsgdfhdfh
         #yubikey_db
         if OpHandler.AUTHORIZATION_SAML == authkey:
+            sphandler.authnmethod.acr = authkey
             authn = sphandler.authnmethod
         elif OpHandler.AUTHORIZATION_CAS == authkey:
             ldap_extra_config.update(ldap_config)
-            authn = CasAuthnMethod(None, cas_server, cas_service_url, authorization_url,
+            authn = CasAuthnMethod(None, cas_server, cas_service_url, authorization_url, authkey,
                                    UserLDAPMemberValidation(**ldap_extra_config))
         elif OpHandler.AUTHORIZATION_PASSWORD == authkey:
             authn = UsernamePasswordMako("login", None, authorization_page_password, mako_lookup, passwd,
-                                         authorization_url, password_query_key="password")
+                                         authkey, authorization_url, password_query_key="password")
         elif OpHandler.AUTHORIZATION_PASSWORD_YUBIKEY == authkey:
             authn = UsernamePasswordMako("login", None, authorization_page_password_yubikey, mako_lookup, passwd,
-                                         authorization_url, password_query_key="password", yubikey_db=yubikey_db,
+                                         authkey, authorization_url, password_query_key="password", yubikey_db=yubikey_db,
                                          yubikey_server=yubikey_server, yubikey_otp_key="otp")
         elif OpHandler.AUTHORIZATION_YUBIKEY == authkey:
             authn = UsernamePasswordMako("login", None, authorization_page_yubikey, mako_lookup, passwd,
-                                         authorization_url, yubikey_db=yubikey_db, yubikey_server=yubikey_server,
+                                         authkey, authorization_url, yubikey_db=yubikey_db, yubikey_server=yubikey_server,
                                          yubikey_otp_key="otp")
         return authn
 
@@ -646,7 +647,7 @@ class OpHandler:
 
     def set_authentication(self, environ):
         """
-        Sets the acr_value sen from the client in the current users OpHandlerCache.
+        Sets the acr_value sent from the client in the current users OpHandlerCache.
         This method must be used to save the authentication method used by the user so the correct
         method for user information retrieval can be used when authentication methods have
         different user information retrieval methods.

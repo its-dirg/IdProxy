@@ -1,3 +1,5 @@
+from auth.base import Authenticate
+from auth.pyoidc.user import _UserAuthnMethod
 from oic.utils.authn.user import UserAuthnMethod
 
 from idproxy.client.sp.handler import UserInfoSpHandler
@@ -45,21 +47,42 @@ class UserInfoAuthHandler(object):
 #This class is a authentication class for oic.oic.provider.Provider.
 #This specific class can take any number of authentication methods and then execute them in order.
 #All authentications must succeed to grant the user access to the OP.
-class MultipleAuthHandler(UserAuthnMethod):
+class MultipleAuthHandler(_UserAuthnMethod):
     #Session name for the authentication method counter.
     MULTIPLEAUTHHANDLER_COUNTER = "MULTIPLEAUTHHANDLER_COUNTER"
 
-    def __init__(self, auth_handler_list):
+    def __init__(self, auth_handler_list, acr):
         """
         Constructor.
         :param auth_handler_list: An ordered list of authentication classes (implementations of UserAuthnMethod).
         """
-        UserAuthnMethod.__init__(self, "")
+        _UserAuthnMethod.__init__(self, "")
         self.auth_handler_list = auth_handler_list
         #Amount of authentications that has to be performed.
         self.steps = len(auth_handler_list) - 1
         #Must be updated on the side.
         self.ophandler = None
+        self.acr = acr
+
+    def __setattr__(self, name, value):
+        if name == "srv":
+            try:
+                self.authn_helper.__setattr__(name, value)
+            except Exception:
+                pass
+            try:
+                self.userauthnmethod.__setattr__(name, value)
+            except Exception:
+                pass
+            try:
+                for item in self.auth_handler_list:
+                    try:
+                        item.__setattr__(name, value)
+                    except Exception:
+                        pass
+            except:
+                pass
+        super(_UserAuthnMethod, self).__setattr__(name, value)
 
     def set_srv(self, srv):
         self.srv = srv
@@ -80,6 +103,11 @@ class MultipleAuthHandler(UserAuthnMethod):
         :param authn_args: Passed on to the "real" authentication class.
         :return: Response from the authentication class used.
         """
+        if "query" in authn_args:
+            query = authn_args["query"]
+            if self.acr is not None and query is not None and query.find(Authenticate.CONST_ACR) == -1:
+                query += "&" + Authenticate.CONST_ACR + "=" + self.acr
+                authn_args["query"] = query
         step = 0
         if "MULTIPLEAUTHHANDLER_COUNTER" not in self.ophandler.session:
             self.ophandler.session["MULTIPLEAUTHHANDLER_COUNTER"] = step
