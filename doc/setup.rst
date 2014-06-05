@@ -467,10 +467,13 @@ A dictionary that contains SAML response attributes that must be returned from t
 The value for the key should be None if all values are allowed, or a list of strings containing the approved values to be
 returned. Set VALID_ATTRIBUTE_RESPONSE to None if it should not be used.
 
+The verification of values will be approved if the given string is a substring of the returned value.
+
 Example::
 
     VALID_ATTRIBUTE_RESPONSE = {
-        "eduPersonAffiliation": ["student"]
+        "eduPersonAffiliation": ["student"],
+        "eduPersonScopedAffiliation": ["student"]
     }
 
 ATTRIBUTE_WHITELIST
@@ -479,6 +482,8 @@ A dictionary where the keys are all the SAML attributes that may be returned by 
 the key represents what a attibute value must contain to be valid. If the key value is none all attribute values are
 valid.
 Set VALID_ATTRIBUTE_RESPONSE to None if all attributes from the underlying IdP should be returned.
+
+The verification of values will be approved if the given string is a substring of the returned value.
 
 Example::
 
