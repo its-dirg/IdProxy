@@ -96,8 +96,8 @@ if proxy:
 if proxy:
     op_str = op_str.replace("#    \"SAML\": {\"ACR\": \"SAML\", \"WEIGHT\": 3, \"URL\": ISSUER, \"USER_INFO\": \"SAML\"},",
                    "    \"SAML\": {\"ACR\": \"SAML\", \"WEIGHT\": 3, \"URL\": ISSUER, \"USER_INFO\": \"SAML\"},")
-    idp_str = idp_str.replace("    #\"SAML\": {\"ACR\": authn_context_class_ref(UNSPECIFIED), \"WEIGHT\": 3, \"URL\": BASE, \"USER_INFO\": \"SAML\"},",
-                              "    \"SAML\": {\"ACR\": authn_context_class_ref(UNSPECIFIED), \"WEIGHT\": 3, \"URL\": BASE, \"USER_INFO\": \"SAML\"},")
+    idp_str = idp_str.replace("    #\"SAML\": {\"ACR\": authn_context_class_ref(UNSPECIFIED), \"WEIGHT\": 3, \"URL\": BASE, \"USER_INFO\": None},",
+                              "    \"SAML\": {\"ACR\": authn_context_class_ref(UNSPECIFIED), \"WEIGHT\": 3, \"URL\": BASE, \"USER_INFO\": None},")
 
     idp_meta = raw_input("Url (must begin with http) or path to metadata file contaning all IdP's that should be behind the proxy:")
     url = False
