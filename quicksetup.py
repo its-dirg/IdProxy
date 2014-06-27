@@ -4,6 +4,7 @@ import os
 import shutil
 from certgeneration import generateCert
 from saml2.cert import OpenSSLWrapper
+from pubkeygen import generatePublicKey
 
 generate_cert_str = "    \"only_use_keys_in_metadata\": False,\n" \
                         "    \"cert_handler_extra_class\": None,\n" \
@@ -261,7 +262,16 @@ server_cert_info_ca = {
     "organization_unit": unit
 }
 
-sn = generateCert(server_cert_info_ca)
+yes = raw_input("Type Yes(Y) to generate new certificates for jwks:")
+generate_jwks_cert = False
+if yes.lower() == "yes" or yes.lower() == "y":
+    generate_jwks_cert = True
+sn, jwks_cert = generateCert(server_cert_info_ca, generate_jwks_cert)
+
+if not generate_jwks_cert:
+    jwks_cert = raw_input("Enter the path to existing cert for jwks:")
+
+generatePublicKey(jwks_cert)
 
 if generate_root_cert:
     if not os.path.exists("root_cert"):
